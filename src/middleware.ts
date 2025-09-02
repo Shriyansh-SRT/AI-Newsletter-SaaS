@@ -1,9 +1,15 @@
-import { updateSession } from "@/lib/supabase/middleware";
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
   console.log("Root middleware called for:", request.nextUrl.pathname);
-  return await updateSession(request);
+
+  // Simple test - redirect homepage to signin
+  if (request.nextUrl.pathname === "/") {
+    console.log("Redirecting homepage to signin");
+    return NextResponse.redirect(new URL("/signin", request.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {

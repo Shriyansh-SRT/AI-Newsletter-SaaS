@@ -35,21 +35,63 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: DO NOT REMOVE auth.getUser()
 
-  // const {
-  //   data: { user },
-  // } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // if (
-  //   !user &&
-  //   !request.nextUrl.pathname.startsWith("/login") &&
-  //   !request.nextUrl.pathname.startsWith("/auth") &&
-  //   !request.nextUrl.pathname.startsWith("/error")
-  // ) {
-  //   // no user, potentially respond by redirecting the user to the login page
-  //   const url = request.nextUrl.clone();
-  //   url.pathname = "/login";
-  //   return NextResponse.redirect(url);
-  // }
+  // Debug logging
+  console.log("Middleware - Pathname:", request.nextUrl.pathname);
+  console.log(
+    "Middleware - User:",
+    user ? "Authenticated" : "Not authenticated"
+  );
+
+  // Public routes that don't require authentication
+  const publicRoutes = [
+    "/signin",
+    "/verify-email",
+    "/auth/callback",
+    "/auth/auth-code-error",
+  ];
+  const isPublicRoute = publicRoutes.some((route) =>
+    request.nextUrl.pathname.startsWith(route)
+  );
+
+  // Protected routes that require authentication
+  const protectedRoutes = ["/dashboard", "/settings", "/newsletters"];
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    request.nextUrl.pathname.startsWith(route)
+  );
+
+  // Redirect homepage to dashboard if user is authenticated
+  if (request.nextUrl.pathname === "/") {
+    console.log("Middleware - Redirecting from homepage");
+    if (user) {
+      console.log("Middleware - User authenticated, redirecting to dashboard");
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    } else {
+      console.log("Middleware - User not authenticated, redirecting to signin");
+      const url = request.nextUrl.clone();
+      url.pathname = "/signin";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Redirect authenticated users away from public routes
+  if (user && isPublicRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect unauthenticated users to signin for protected routes
+  if (!user && isProtectedRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/signin";
+    return NextResponse.redirect(url);
+  }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
