@@ -1,6 +1,15 @@
-import React from "react";
+"use client";
+
+import React, { useEffect } from "react";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 const DashboardPage = () => {
+  const getSession = useAuthStore((state) => state.getSession);
+
+  useEffect(() => {
+    getSession();
+  }, [getSession]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

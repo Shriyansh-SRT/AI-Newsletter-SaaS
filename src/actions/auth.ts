@@ -203,24 +203,10 @@ export const logout = async () => {
     await supabase.auth.signOut();
     redirect("/signin");
   } catch (error) {
-    if (error instanceof Error) {
-      return {
-        errors: {
-          email: [],
-          password: [],
-          confirmPassword: [],
-          formError: [error.message],
-        },
-      };
+    if (error && typeof error === "object" && "digest" in error) {
+      throw error;
     }
 
-    return {
-      errors: {
-        email: [],
-        password: [],
-        confirmPassword: [],
-        formError: ["An unexpected error occurred. Please try again."],
-      },
-    };
+    redirect("/signin");
   }
 };
