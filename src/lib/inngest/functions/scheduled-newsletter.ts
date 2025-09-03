@@ -1,6 +1,8 @@
 import { fetchArticles, NewsArticle } from "@/lib/utils/news";
 import { createClient } from "@/lib/supabase/server";
 import { inngest } from "../client";
+import { marked } from "marked";
+import emailjs from "@emailjs/nodejs";
 
 // Types for better type safety
 interface NewsletterEvent {
@@ -137,15 +139,111 @@ export default inngest.createFunction(
         }
       });
 
-      return {
-        summary,
-        userId: event.data.userId,
+      const newsletterContent = summary.choices[0].message.content;
+
+      if (!newsletterContent) {
+        throw new Error("No newsletter content generated");
+      }
+
+      //convert markdown to html for email
+      const htmlContent = marked(newsletterContent);
+
+      //send email using emailjs
+      await step.run("send-email", async () => {
+        const templateParams = {
+          to_email: event.data.email,
+          newsletter_content: htmlContent,
+          categories: event.data.categories.join(", "),
+          article_count: allArticles.length,
+          current_date: new Date().toLocaleDateString(),
+        };
+
+        // setup emailjs with your serviceid, templateid and public key
+        const serviceId = process.env.EMAILJS_SERVICE_ID;
+        const templateId = process.env.EMAILJS_TEMPLATE_ID;
+        const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+
+        if (!serviceId || !templateId || !publicKey) {
+          throw new Error("EmailJS credentials not found");
+        }
+
+        try {
+          const response = await emailjs.send(
+            serviceId,
+            templateId,
+            templateParams,
+            {
+              publicKey: publicKey,
+            }
+          );
+          console.log("Email sent successfully:", response);
+          return response;
+        } catch (error) {
+          console.error("Error sending email:", error);
+        }
+      });
+
+      if (!event.data.isTest) {
+        // 4️⃣ Schedule the next newsletter based on frequency
+        await step.run("schedule-next", async () => {
+          const now = new Date();
+          let nextScheduleTime: Date;
+
+          switch (event.data.frequency) {
+            case "daily":
+              nextScheduleTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+              break;
+            case "weekly":
+              nextScheduleTime = new Date(
+                now.getTime() + 7 * 24 * 60 * 60 * 1000
+              );
+              break;
+            case "biweekly":
+              nextScheduleTime = new Date(
+                now.getTime() + 3 * 24 * 60 * 60 * 1000
+              );
+              break;
+            default:
+              nextScheduleTime = new Date(
+                now.getTime() + 7 * 24 * 60 * 60 * 1000
+              );
+          }
+          nextScheduleTime.setHours(9, 0, 0, 0);
+
+          // Schedule the next newsletter
+          await inngest.send({
+            name: "newsletter.schedule",
+            data: {
+              userId: event.data.userId,
+              email: event.data.email,
+              categories: event.data.categories,
+              frequency: event.data.frequency,
+              scheduledFor: nextScheduleTime.toISOString(),
+            },
+            ts: nextScheduleTime.getTime(),
+          });
+
+          console.log(
+            `Next newsletter scheduled for: ${nextScheduleTime.toISOString()}`
+          );
+        });
+      }
+      const result = {
+        newsletter: newsletterContent,
+        articleCount: allArticles.length,
+        categories: event.data.categories,
+        emailSent: true,
+        nextScheduled: true,
+        success: true,
         runId: runId,
       };
+      return result;
     } catch (error) {
       console.error("Error in newsletter generation:", error);
       return {
         error: error instanceof Error ? error.message : "Unknown error",
+        success: false,
+        runId: runId,
       };
     }
   }
