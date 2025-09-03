@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { getTrendingTopics } from "@/lib/utils/news";
+import { useActionState } from "react";
+import { createUpdateUserPreferences } from "@/actions/userpreference";
 
 interface UserPreferences {
   id: string;
@@ -109,6 +110,38 @@ const categories = [
     name: "Biotechnology",
     description: "Bio-tech and health tech",
   },
+  {
+    id: "technology",
+    name: "Technology",
+    description: "Latest tech news and innovations",
+  },
+  {
+    id: "business",
+    name: "Business",
+    description: "Business trends and market updates",
+  },
+  { id: "sports", name: "Sports", description: "Sports news and highlights" },
+  {
+    id: "entertainment",
+    name: "Entertainment",
+    description: "Movies, TV, and celebrity news",
+  },
+  {
+    id: "science",
+    name: "Science",
+    description: "Scientific discoveries and research",
+  },
+  { id: "health", name: "Health", description: "Health and wellness updates" },
+  {
+    id: "politics",
+    name: "Politics",
+    description: "Political news and current events",
+  },
+  {
+    id: "environment",
+    name: "Environment",
+    description: "Climate and environmental news",
+  },
 ];
 
 const frequencyOptions = [
@@ -128,7 +161,6 @@ const PreferencesPage = () => {
   const router = useRouter();
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   // Form state
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -137,6 +169,13 @@ const PreferencesPage = () => {
   );
   const [email, setEmail] = useState("");
   const [customCategory, setCustomCategory] = useState("");
+
+  // Server action state
+  const initialState = { error: null, success: false, message: null };
+  const [state, formAction] = useActionState(
+    createUpdateUserPreferences,
+    initialState
+  );
 
   useEffect(() => {
     getSession();
@@ -147,6 +186,16 @@ const PreferencesPage = () => {
       fetchUserPreferences();
     }
   }, [user]);
+
+  // Handle server action response
+  useEffect(() => {
+    if (state.success) {
+      alert(state.message || "Preferences saved successfully!");
+      router.push("/dashboard");
+    } else if (state.error) {
+      alert(state.error);
+    }
+  }, [state, router]);
 
   const fetchUserPreferences = async () => {
     try {
@@ -175,43 +224,6 @@ const PreferencesPage = () => {
       console.error("Failed to fetch preferences:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSavePreferences = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!user) return;
-    if (selectedCategories.length === 0) {
-      alert("Please select at least one category");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.from("user_preferences").upsert({
-        user_id: user.id,
-        categories: selectedCategories,
-        frequency: frequency,
-        email: email,
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      });
-
-      if (error) {
-        console.error("Error saving preferences:", error);
-        alert("Failed to save preferences. Please try again.");
-        return;
-      }
-
-      alert("Preferences saved successfully!");
-      router.push("/dashboard");
-    } catch (error) {
-      console.error("Failed to save preferences:", error);
-      alert("Failed to save preferences. Please try again.");
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -273,9 +285,21 @@ const PreferencesPage = () => {
         </div>
 
         <form
-          onSubmit={handleSavePreferences}
+          action={formAction}
           className="bg-white rounded-xl shadow-sm border border-gray-200 p-8"
         >
+          {/* Hidden form fields for server action */}
+          {selectedCategories.map((category) => (
+            <input
+              key={category}
+              type="hidden"
+              name="categories"
+              value={category}
+            />
+          ))}
+          <input type="hidden" name="frequency" value={frequency} />
+          <input type="hidden" name="email" value={email} />
+
           {/* Categories Section */}
           <div className="mb-10">
             <div className="text-center mb-8">
@@ -468,14 +492,14 @@ const PreferencesPage = () => {
               </button>
               <button
                 type="submit"
-                disabled={saving || selectedCategories.length === 0}
+                disabled={selectedCategories.length === 0}
                 className={`px-6 py-3 rounded-lg font-medium text-white transition-all duration-200 ${
                   selectedCategories.length === 0
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"
                 }`}
               >
-                {saving ? "Saving..." : "Save Preferences"}
+                Save Preferences
               </button>
             </div>
           </div>
