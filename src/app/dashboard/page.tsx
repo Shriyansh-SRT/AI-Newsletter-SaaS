@@ -1,46 +1,224 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+
+interface UserPreferences {
+  id: string;
+  user_id: string;
+  categories: string[];
+  frequency: "daily" | "weekly" | "biweekly";
+  email: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Skeleton Loading Component
+const SkeletonCard = () => (
+  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse">
+    <div className="flex items-center justify-between mb-6">
+      <div className="h-6 bg-gray-200 rounded w-48"></div>
+      <div className="h-6 bg-gray-200 rounded w-16"></div>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="space-y-2">
+          <div className="h-4 bg-gray-200 rounded w-24"></div>
+          <div className="h-6 bg-gray-200 rounded w-32"></div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 const DashboardPage = () => {
   const getSession = useAuthStore((state) => state.getSession);
+  const user = useAuthStore((state) => state.user);
+  const router = useRouter();
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
     getSession();
   }, [getSession]);
 
+  useEffect(() => {
+    if (user) {
+      fetchUserPreferences();
+    }
+  }, [user]);
+
+  const fetchUserPreferences = async () => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("user_preferences")
+        .select("*")
+        .eq("user_id", user?.id)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Error fetching preferences:", error);
+      }
+
+      setPreferences(data);
+    } catch (error) {
+      console.error("Failed to fetch preferences:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePreferences = () => {
+    router.push("/dashboard/preferences");
+  };
+
+  const handleToggleNewsletter = async () => {
+    if (!preferences || !user) return;
+
+    setUpdatingStatus(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("user_preferences")
+        .update({ is_active: !preferences.is_active })
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Error updating status:", error);
+        return;
+      }
+
+      setPreferences((prev) =>
+        prev ? { ...prev, is_active: !prev.is_active } : null
+      );
+    } catch (error) {
+      console.error("Failed to update status:", error);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleManageSubscription = () => {
+    // TODO: Implement subscription management
+    alert("Subscription management coming soon!");
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const getStatusBadge = (isActive: boolean) => {
+    return (
+      <span
+        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+          isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+        }`}
+      >
+        <div
+          className={`w-2 h-2 rounded-full mr-2 ${
+            isActive ? "bg-green-400" : "bg-red-400"
+          }`}
+        ></div>
+        {isActive ? "Active" : "Paused"}
+      </span>
+    );
+  };
+
+  const getFrequencyDisplay = (frequency: string) => {
+    const frequencyMap = {
+      daily: "Daily",
+      weekly: "Weekly",
+      biweekly: "Bi-weekly",
+    };
+    return frequencyMap[frequency as keyof typeof frequencyMap] || frequency;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Header Skeleton */}
+          <div className="text-center mb-12">
+            <div className="h-10 bg-gray-200 rounded w-80 mx-auto mb-4 animate-pulse"></div>
+            <div className="h-6 bg-gray-200 rounded w-96 mx-auto animate-pulse"></div>
+          </div>
+
+          {/* Cards Skeleton */}
+          <div className="space-y-8">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Newsletter Dashboard
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            Manage your personalized newsletter preferences and stay informed
+            with AI-curated content tailored just for you
+          </p>
+        </div>
+
+        {/* Current Preferences Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8 backdrop-blur-sm bg-white/80">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                AI Newsletter Dashboard
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Welcome to your personalized AI newsletter dashboard
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                Current Preferences
+              </h2>
+              <p className="text-gray-600">
+                Your newsletter settings and delivery preferences
               </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                Settings
-              </button>
-              <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-                Create Newsletter
-              </button>
-            </div>
+            {preferences && getStatusBadge(preferences.is_active)}
           </div>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-blue-50 rounded-lg p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+          {preferences ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {/* Categories */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  Categories
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {preferences.categories.map((category, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border border-blue-200"
+                    >
+                      {category}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Frequency */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  Frequency
+                </h3>
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
                     <svg
-                      className="w-4 h-4 text-white"
+                      className="w-5 h-5 text-blue-600"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -49,26 +227,25 @@ const DashboardPage = () => {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
                   </div>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-blue-600">
-                    Newsletters
+                  <p className="text-lg font-semibold text-gray-900">
+                    {getFrequencyDisplay(preferences.frequency)}
                   </p>
-                  <p className="text-2xl font-bold text-blue-900">0</p>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-green-50 rounded-lg p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+              {/* Email */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  Email
+                </h3>
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
                     <svg
-                      className="w-4 h-4 text-white"
+                      className="w-5 h-5 text-green-600"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -77,26 +254,25 @@ const DashboardPage = () => {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+                        d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                       />
                     </svg>
                   </div>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-green-600">
-                    Subscribers
+                  <p className="text-lg font-semibold text-gray-900">
+                    {preferences.email || user?.email || "Not set"}
                   </p>
-                  <p className="text-2xl font-bold text-green-900">0</p>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-purple-50 rounded-lg p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+              {/* Created Date */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  Created
+                </h3>
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
                     <svg
-                      className="w-4 h-4 text-white"
+                      className="w-5 h-5 text-purple-600"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -105,50 +281,265 @@ const DashboardPage = () => {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
                   </div>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-purple-600">
-                    Published
+                  <p className="text-lg font-semibold text-gray-900">
+                    {formatDate(preferences.created_at)}
                   </p>
-                  <p className="text-2xl font-bold text-purple-900">0</p>
+                </div>
+              </div>
+
+              {/* Last Updated */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  Last Updated
+                </h3>
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg
+                      className="w-5 h-5 text-orange-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {formatDate(preferences.updated_at)}
+                  </p>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Recent Activity
-            </h2>
-            <div className="text-center py-8">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">
-                No activity yet
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg
+                  className="w-12 h-12 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                No preferences set
               </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Get started by creating your first AI newsletter
+              <p className="text-gray-600 mb-6">
+                Set up your newsletter preferences to start receiving
+                personalized content
               </p>
-              <div className="mt-6">
-                <button className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                  Create Newsletter
-                </button>
+              <button
+                onClick={handleUpdatePreferences}
+                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Set Up Preferences
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8 backdrop-blur-sm bg-white/80">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              Actions
+            </h2>
+            <p className="text-gray-600">
+              Manage your newsletter settings and subscription
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button
+              onClick={handleUpdatePreferences}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105"
+            >
+              <div className="flex items-center justify-center">
+                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mr-4">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <h3 className="font-semibold text-lg">Update Preferences</h3>
+                  <p className="text-blue-100 text-sm">
+                    Customize your newsletter
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={handleToggleNewsletter}
+              disabled={updatingStatus}
+              className={`group relative overflow-hidden rounded-xl p-6 transition-all duration-200 transform hover:scale-105 ${
+                preferences?.is_active
+                  ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                  : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
+              }`}
+            >
+              <div className="flex items-center justify-center">
+                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mr-4">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d={
+                        preferences?.is_active
+                          ? "M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          : "M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      }
+                    />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <h3 className="font-semibold text-lg">
+                    {updatingStatus
+                      ? "Updating..."
+                      : preferences?.is_active
+                      ? "Pause Newsletter"
+                      : "Resume Newsletter"}
+                  </h3>
+                  <p className="text-white/80 text-sm">
+                    {preferences?.is_active
+                      ? "Temporarily stop delivery"
+                      : "Resume newsletter delivery"}
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={handleManageSubscription}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-gray-600 to-gray-700 p-6 text-white hover:from-gray-700 hover:to-gray-800 transition-all duration-200 transform hover:scale-105"
+            >
+              <div className="flex items-center justify-center">
+                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mr-4">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                    />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <h3 className="font-semibold text-lg">Manage Subscription</h3>
+                  <p className="text-gray-100 text-sm">Billing and plans</p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* How It Works */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 backdrop-blur-sm bg-white/80">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              How It Works
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Your personalized newsletter journey from content curation to
+              delivery
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-lg font-bold">1</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Personalized Content Generation
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Your newsletter is automatically generated based on your
+                    selected categories using advanced AI technology.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-lg font-bold">2</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Scheduled Delivery
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Newsletters are delivered at your chosen frequency (daily,
+                    weekly, or bi-weekly) directly to your email.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-lg font-bold">3</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Flexible Control
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Pause and resume your newsletter at any time, update your
+                    preferences, or manage your subscription with ease.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-lg font-bold">4</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Smart Curation
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Our AI analyzes thousands of articles to bring you the most
+                    relevant and interesting content from your chosen topics.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
