@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useActionState } from "react";
 import { createUpdateUserPreferences } from "@/actions/userpreference";
+import { FaCalendarCheck } from "react-icons/fa";
+import { IoStatsChart } from "react-icons/io5";
+import { FaChartLine } from "react-icons/fa6";
 
 interface UserPreferences {
   id: string;
@@ -145,13 +148,23 @@ const categories = [
 ];
 
 const frequencyOptions = [
-  { id: "daily", name: "Daily", description: "Every day", icon: "📅" },
-  { id: "weekly", name: "Weekly", description: "Once a week", icon: "📊" },
+  {
+    id: "daily",
+    name: "Daily",
+    description: "Every day",
+    icon: <FaCalendarCheck />,
+  },
+  {
+    id: "weekly",
+    name: "Weekly",
+    description: "Once a week",
+    icon: <IoStatsChart />,
+  },
   {
     id: "biweekly",
     name: "Bi-weekly",
     description: "Every 2 weeks",
-    icon: "📈",
+    icon: <FaChartLine />,
   },
 ];
 

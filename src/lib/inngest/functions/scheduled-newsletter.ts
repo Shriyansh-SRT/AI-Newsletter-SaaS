@@ -1,21 +1,8 @@
-import { fetchArticles, NewsArticle } from "@/lib/utils/news";
-import { createClient } from "@/lib/supabase/server";
-import { inngest } from "../client";
+import { inngest } from "@/lib/inngest/client";
+import { fetchArticles } from "@/lib/utils/news";
+import { Resend } from "resend";
 import { marked } from "marked";
-import emailjs from "@emailjs/nodejs";
-
-// Types for better type safety
-interface NewsletterEvent {
-  userId: string;
-  categories: string[];
-  frequency?: "daily" | "weekly";
-}
-
-interface NewsletterSummary {
-  title: string;
-  content: string;
-  subjectLine: string;
-}
+import { createClient } from "@/lib/supabase/server";
 
 export default inngest.createFunction(
   { id: "newsletter/scheduled" },
@@ -62,124 +49,137 @@ export default inngest.createFunction(
         return fetchArticles(event.data.categories);
       });
 
-      // 2️⃣ Generate AI summary with improved prompt
-      const summary = await step.run("summarize-news", async () => {
-        try {
-          return await step.ai.infer("ai-summary", {
-            model: step.ai.models.openai({ model: "gpt-3.5-turbo" }),
-            body: {
-              messages: [
-                {
-                  role: "system",
-                  content: `You are an expert newsletter editor creating a personalized newsletter for a tech-savvy audience.
+      // 2️⃣ Generate newsletter content (template-based, no AI required)
+      const newsletterContent = await step.run(
+        "generate-newsletter",
+        async () => {
+          console.log("Generating newsletter using template...");
 
-                  Your task is to create an engaging, informative newsletter that:
-                  - Highlights the most important and interesting stories
-                  - Provides context and insights that add value
-                  - Uses a friendly, conversational tone
-                  - Is well-structured with clear sections
-                  - Includes a compelling subject line for email
-                  - Keeps the reader informed and engaged
+          const date = new Date().toLocaleDateString();
+          const topArticles = allArticles.slice(0, 5);
 
-                  Format your response as JSON with the following structure:
-                  {
-                    "title": "Newsletter Title",
-                    "subjectLine": "Email Subject Line",
-                    "content": "Formatted newsletter content with sections, bullet points, and clear organization"
-                  }
+          return `# Your Personalized Newsletter
 
-                  Make the content email-friendly with:
-                  - Clear section headers
-                  - Bullet points for key takeaways
-                  - Brief but informative summaries
-                  - Call-to-action suggestions where appropriate
-                  - Professional yet approachable tone`,
-                },
-                {
-                  role: "user",
-                  content: `Create a newsletter summary for these articles from the past week.
+## 📰 Top Stories This Week
 
-                  User ID: ${event.data.userId}
-                  Newsletter Frequency: ${isUserActive.frequency}
-                  Categories requested: ${event.data.categories.join(", ")}
-                  
-                  Articles to summarize:
-                  ${allArticles
-                    .map(
-                      (article: NewsArticle, index: number) =>
-                        `${index + 1}. ${article.title}\n   Description: ${
-                          article.description
-                        }\n   Source: ${
-                          article.source || "Unknown"
-                        }\n   Published: ${
-                          article.publishedAt || "Unknown"
-                        }\n   URL: ${article.url}\n`
-                    )
-                    .join("\n")}
-                  
-                  Please provide a JSON response with title, subjectLine, and content fields.`,
-                },
-              ],
-              temperature: 0.7,
-            },
-          });
-        } catch (error) {
-          console.error("OpenAI API error:", error);
+${topArticles
+  .map(
+    (article, index) => `
+### ${index + 1}. ${article.title}
 
-          // Check if it's a quota error
-          const errorObj = error as { error?: { code?: string } };
-          if (errorObj?.error?.code === "insufficient_quota") {
-            throw new Error(
-              "OpenAI quota exceeded. Please check your billing or try again later."
-            );
-          }
+${article.description}
 
-          // For other AI errors, throw the original error
-          throw error;
+**Source:** ${article.source}
+**Read more:** [${article.title}](${article.url})
+`
+  )
+  .join("\n")}
+
+## 📊 Newsletter Summary
+
+- **Categories:** ${event.data.categories.join(", ")}
+- **Articles Analyzed:** ${allArticles.length}
+- **Generated:** ${date}
+- **Frequency:** ${event.data.frequency}
+
+## 🔗 Quick Links
+
+${topArticles
+  .slice(0, 3)
+  .map((article, index) => `${index + 1}. [${article.title}](${article.url})`)
+  .join("\n")}
+
+---
+
+*This newsletter was automatically generated based on your selected categories. Stay informed with the latest news and insights!*
+
+**Categories:** ${event.data.categories.join(", ")}
+**Total Articles:** ${allArticles.length}
+**Generated on:** ${date}`;
         }
-      });
-
-      const newsletterContent = summary.choices[0].message.content;
+      );
 
       if (!newsletterContent) {
-        throw new Error("No newsletter content generated");
+        throw new Error("Failed to generate newsletter content");
       }
 
-      //convert markdown to html for email
+      // Convert markdown to HTML for email
       const htmlContent = marked(newsletterContent);
 
-      //send email using emailjs
+      // 3️⃣ Send email using Resend
       await step.run("send-email", async () => {
-        const templateParams = {
-          to_email: event.data.email,
-          newsletter_content: htmlContent,
-          categories: event.data.categories.join(", "),
-          article_count: allArticles.length,
-          current_date: new Date().toLocaleDateString(),
-        };
+        const resend = new Resend(process.env.RESEND_API_KEY);
 
-        // setup emailjs with your serviceid, templateid and public key
-        const serviceId = process.env.EMAILJS_SERVICE_ID;
-        const templateId = process.env.EMAILJS_TEMPLATE_ID;
-        const publicKey = process.env.EMAILJS_PUBLIC_KEY;
-
-        if (!serviceId || !templateId || !publicKey) {
-          throw new Error("EmailJS credentials not found");
-        }
+        const subject = `📰 Your ${
+          event.data.frequency
+        } newsletter: ${event.data.categories.join(", ")}`;
 
         try {
-          const response = await emailjs.send(
-            serviceId,
-            templateId,
-            templateParams,
-            {
-              publicKey: publicKey,
-            }
-          );
-          console.log("Email sent successfully:", response);
-          return response;
+          console.log("Sending email via Resend...");
+
+          const { data, error } = await resend.emails.send({
+            from: "onboarding@resend.dev", // Use this for testing
+            to: [event.data.email],
+            subject: subject,
+            html: `
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>${subject}</title>
+                  <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+                    .logo { font-size: 24px; font-weight: bold; color: #2563eb; margin-bottom: 5px; }
+                    .subtitle { color: #666; font-size: 14px; }
+                    .content { background-color: #f9fafb; border-radius: 8px; padding: 25px; margin: 20px 0; }
+                    .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px; }
+                    .stats { background: linear-gradient(135deg, #dbeafe, #eff6ff); border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center; }
+                    .stats h3 { color: #1e40af; margin: 0 0 10px 0; font-size: 16px; }
+                    .stats p { margin: 5px 0; color: #1f2937; font-size: 13px; }
+                  </style>
+                </head>
+                <body>
+                  <div class="header">
+                    <div class="logo">📰 AI Newsletter</div>
+                    <div class="subtitle">Your personalized news digest</div>
+                  </div>
+                  
+                  <div class="stats">
+                    <h3>📊 Newsletter Summary</h3>
+                    <p><strong>Categories:</strong> ${event.data.categories.join(
+                      ", "
+                    )}</p>
+                    <p><strong>Articles analyzed:</strong> ${
+                      allArticles.length
+                    }</p>
+                    <p><strong>Generated on:</strong> ${new Date().toLocaleDateString()}</p>
+                  </div>
+                  
+                  <div class="content">
+                    ${htmlContent}
+                  </div>
+                  
+                  <div class="footer">
+                    <p>This newsletter was generated just for you using AI technology.</p>
+                    <p>Thanks for being part of our community!</p>
+                  </div>
+                </body>
+              </html>
+            `,
+          });
+
+          if (error) {
+            console.error("Resend error:", error);
+            throw error;
+          }
+
+          console.log("Email sent successfully via Resend:", data);
+          return data;
         } catch (error) {
-          console.error("Error sending email:", error);
+          console.error("Email sending failed:", error);
+          throw error;
         }
       });
 
@@ -200,7 +200,7 @@ export default inngest.createFunction(
               break;
             case "biweekly":
               nextScheduleTime = new Date(
-                now.getTime() + 3 * 24 * 60 * 60 * 1000
+                now.getTime() + 14 * 24 * 60 * 60 * 1000
               );
               break;
             default:
@@ -208,6 +208,7 @@ export default inngest.createFunction(
                 now.getTime() + 7 * 24 * 60 * 60 * 1000
               );
           }
+
           nextScheduleTime.setHours(9, 0, 0, 0);
 
           // Schedule the next newsletter
@@ -228,6 +229,7 @@ export default inngest.createFunction(
           );
         });
       }
+
       const result = {
         newsletter: newsletterContent,
         articleCount: allArticles.length,
@@ -237,14 +239,11 @@ export default inngest.createFunction(
         success: true,
         runId: runId,
       };
+
       return result;
     } catch (error) {
-      console.error("Error in newsletter generation:", error);
-      return {
-        error: error instanceof Error ? error.message : "Unknown error",
-        success: false,
-        runId: runId,
-      };
+      console.error("Scheduled newsletter generation failed:", error);
+      throw error;
     }
   }
 );

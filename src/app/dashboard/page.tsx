@@ -1,24 +1,21 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useAuthStore } from "@/lib/stores/auth-store";
-import { createClient } from "@/lib/supabase/client";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/lib/stores/auth-store";
+import Link from "next/link";
 
 interface UserPreferences {
-  id: string;
-  user_id: string;
   categories: string[];
-  frequency: "daily" | "weekly" | "biweekly";
+  frequency: string;
   email: string;
   is_active: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 // Skeleton Loading Component
 const SkeletonCard = () => (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse">
+  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 backdrop-blur-sm bg-white/80 animate-pulse">
     <div className="flex items-center justify-between mb-6">
       <div className="h-6 bg-gray-200 rounded w-48"></div>
       <div className="h-6 bg-gray-200 rounded w-16"></div>
@@ -34,78 +31,80 @@ const SkeletonCard = () => (
   </div>
 );
 
-const DashboardPage = () => {
-  const getSession = useAuthStore((state) => state.getSession);
-  const user = useAuthStore((state) => state.user);
-  const router = useRouter();
+export default function DashboardPage() {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const { user } = useAuthStore();
 
   useEffect(() => {
-    getSession();
-  }, [getSession]);
-
-  useEffect(() => {
-    if (user) {
-      fetchUserPreferences();
+    if (!user) {
+      router.replace("/signin");
+      return;
     }
-  }, [user]);
 
-  const fetchUserPreferences = async () => {
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("user_preferences")
-        .select("*")
-        .eq("user_id", user?.id)
-        .single();
-
-      if (error && error.code !== "PGRST116") {
-        console.error("Error fetching preferences:", error);
-      }
-
-      setPreferences(data);
-    } catch (error) {
-      console.error("Failed to fetch preferences:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetch("/api/user-preferences")
+      .then((response) => {
+        if (response && response.ok) {
+          return response.json();
+        }
+        throw new Error("Failed to fetch preferences");
+      })
+      .then((data) => {
+        if (data) {
+          setPreferences(data);
+        }
+      })
+      .catch(() => {
+        router.replace("/dashboard/preferences");
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [router, user]);
 
   const handleUpdatePreferences = () => {
     router.push("/dashboard/preferences");
   };
 
-  const handleToggleNewsletter = async () => {
-    if (!preferences || !user) return;
+  const handleDeactivateNewsletter = async () => {
+    if (!user) return;
 
-    setUpdatingStatus(true);
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("user_preferences")
-        .update({ is_active: !preferences.is_active })
-        .eq("user_id", user.id);
+      const response = await fetch("/api/user-preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: false }),
+      });
 
-      if (error) {
-        console.error("Error updating status:", error);
-        return;
+      if (response.ok) {
+        setPreferences((prev) => (prev ? { ...prev, is_active: false } : null));
+        alert("Newsletter deactivated successfully");
       }
-
-      setPreferences((prev) =>
-        prev ? { ...prev, is_active: !prev.is_active } : null
-      );
     } catch (error) {
-      console.error("Failed to update status:", error);
-    } finally {
-      setUpdatingStatus(false);
+      console.error("Error deactivating newsletter:", error);
+      alert("Failed to deactivate newsletter");
     }
   };
 
-  const handleManageSubscription = () => {
-    // TODO: Implement subscription management
-    alert("Subscription management coming soon!");
+  const handleActivateNewsletter = async () => {
+    if (!user) return;
+
+    try {
+      const response = await fetch("/api/user-preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: true }),
+      });
+
+      if (response.ok) {
+        setPreferences((prev) => (prev ? { ...prev, is_active: true } : null));
+        alert("Newsletter activated successfully");
+      }
+    } catch (error) {
+      console.error("Error activating newsletter:", error);
+      alert("Failed to activate newsletter");
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -142,7 +141,7 @@ const DashboardPage = () => {
     return frequencyMap[frequency as keyof typeof frequencyMap] || frequency;
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -290,33 +289,6 @@ const DashboardPage = () => {
                   </p>
                 </div>
               </div>
-
-              {/* Last Updated */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Last Updated
-                </h3>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg
-                      className="w-5 h-5 text-orange-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {formatDate(preferences.updated_at)}
-                  </p>
-                </div>
-              </div>
             </div>
           ) : (
             <div className="text-center py-12">
@@ -392,54 +364,76 @@ const DashboardPage = () => {
               </div>
             </button>
 
-            <button
-              onClick={handleToggleNewsletter}
-              disabled={updatingStatus}
-              className={`group relative overflow-hidden rounded-xl p-6 transition-all duration-200 transform hover:scale-105 ${
-                preferences?.is_active
-                  ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
-                  : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
-              }`}
-            >
-              <div className="flex items-center justify-center">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mr-4">
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+            {preferences && (
+              <>
+                {preferences.is_active ? (
+                  <button
+                    onClick={handleDeactivateNewsletter}
+                    className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-red-600 to-red-700 p-6 text-white hover:from-red-700 hover:to-red-800 transition-all duration-200 transform hover:scale-105"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d={
-                        preferences?.is_active
-                          ? "M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                          : "M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      }
-                    />
-                  </svg>
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-lg">
-                    {updatingStatus
-                      ? "Updating..."
-                      : preferences?.is_active
-                      ? "Pause Newsletter"
-                      : "Resume Newsletter"}
-                  </h3>
-                  <p className="text-white/80 text-sm">
-                    {preferences?.is_active
-                      ? "Temporarily stop delivery"
-                      : "Resume newsletter delivery"}
-                  </p>
-                </div>
-              </div>
-            </button>
+                    <div className="flex items-center justify-center">
+                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mr-4">
+                        <svg
+                          className="w-6 h-6"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <h3 className="font-semibold text-lg">
+                          Pause Newsletter
+                        </h3>
+                        <p className="text-red-100 text-sm">
+                          Temporarily stop delivery
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleActivateNewsletter}
+                    className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-green-600 to-green-700 p-6 text-white hover:from-green-700 hover:to-green-800 transition-all duration-200 transform hover:scale-105"
+                  >
+                    <div className="flex items-center justify-center">
+                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mr-4">
+                        <svg
+                          className="w-6 h-6"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <h3 className="font-semibold text-lg">
+                          Resume Newsletter
+                        </h3>
+                        <p className="text-green-100 text-sm">
+                          Resume newsletter delivery
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                )}
+              </>
+            )}
 
-            <button
-              onClick={handleManageSubscription}
+            <Link
+              href="/dashboard/preferences"
               className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-gray-600 to-gray-700 p-6 text-white hover:from-gray-700 hover:to-gray-800 transition-all duration-200 transform hover:scale-105"
             >
               <div className="flex items-center justify-center">
@@ -463,7 +457,7 @@ const DashboardPage = () => {
                   <p className="text-gray-100 text-sm">Billing and plans</p>
                 </div>
               </div>
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -547,6 +541,4 @@ const DashboardPage = () => {
       </div>
     </div>
   );
-};
-
-export default DashboardPage;
+}

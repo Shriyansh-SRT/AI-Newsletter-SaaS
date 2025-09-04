@@ -101,6 +101,7 @@ export const createUpdateUserPreferences = async (
       name: "newsletter.schedule",
       data: {
         userId: user.id,
+        email: email,
         categories: selectedCategories,
         frequency: frequency,
       },

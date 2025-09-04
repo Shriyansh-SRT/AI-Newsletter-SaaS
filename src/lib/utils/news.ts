@@ -36,42 +36,99 @@ export interface NewsApiResponse {
  */
 export async function fetchArticles(
   categories: string[]
-): Promise<Array<{ title: string; url: string; description: string }>> {
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+): Promise<NewsArticle[]> {
+  // Remove date restriction since your NewsAPI plan doesn't support it
+  console.log("Fetching articles for categories:", categories);
+  console.log(
+    "Using NewsAPI key:",
+    process.env.NEWS_API_KEY ? "Set" : "Missing"
+  );
 
   const promises = categories.map(async (category) => {
     try {
-      const response = await fetch(
-        `https://newsapi.org/v2/everything?q=${encodeURIComponent(
-          category
-        )}&from=${since}&sortBy=publishedAt&apiKey=${process.env.NEWS_API_KEY}`
-      );
+      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+        category
+      )}&sortBy=publishedAt&apiKey=${process.env.NEWS_API_KEY}`;
+
+      console.log(`Fetching news for category: ${category}`);
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log(`Response status for ${category}:`, response.status);
 
       if (!response.ok) {
+        const errorText = await response.text();
         console.error(
           `Failed to fetch news for category ${category}:`,
-          response.statusText
+          response.status,
+          response.statusText,
+          errorText
         );
         return [];
       }
 
       const data = await response.json();
+      console.log(
+        `Articles found for ${category}:`,
+        data.articles?.length || 0
+      );
 
       if (data.status === "error") {
         console.error(`News API error for category ${category}:`, data.message);
         return [];
       }
 
-      return data.articles.slice(0, 5).map((article: NewsArticle) => ({
-        title: article.title || "No title",
-        url: article.url || "#",
-        description: article.description || "No description available",
-        publishedAt: article.publishedAt || "No published date available",
-        author: article.author || "No author available",
-        source: article.source || "No source available",
-        urlToImage: article.urlToImage || "No image available",
-        content: article.content || "No content available",
-      }));
+      const articles = data.articles
+        .slice(0, 10) // Get more articles to filter from
+        .filter((article: any) => {
+          // Filter out low-quality articles
+          const title = article.title?.toLowerCase() || "";
+          const description = article.description?.toLowerCase() || "";
+
+          // Skip package releases, version updates, etc.
+          const skipPatterns = [
+            /^\d+\.\d+\.\d+/, // Version numbers like 2.21.0
+            /^tf-nightly/, // TensorFlow nightly builds
+            /^release/, // Release announcements
+            /^update/, // Update announcements
+            /^version/, // Version announcements
+            /^changelog/, // Changelog entries
+            /^patch/, // Patch releases
+            /^hotfix/, // Hotfix releases
+          ];
+
+          return !skipPatterns.some((pattern) => pattern.test(title));
+        })
+        .slice(0, 5) // Take top 5 after filtering
+        .map(
+          (article: {
+            title?: string;
+            url?: string;
+            description?: string;
+            publishedAt?: string;
+            author?: string;
+            source?: { name?: string };
+            urlToImage?: string;
+            content?: string;
+          }) => ({
+            title: article.title || "No title",
+            url: article.url || "#",
+            description: article.description || "No description available",
+            publishedAt: article.publishedAt || "No published date available",
+            author: article.author || "No author available",
+            source: article.source?.name || "No source available",
+            urlToImage: article.urlToImage || "No image available",
+            content: article.content || "No content available",
+          })
+        );
+
+      console.log(`Processed ${articles.length} articles for ${category}`);
+      return articles;
     } catch (error) {
       console.error(`Error fetching news for category ${category}:`, error);
       return [];
@@ -79,7 +136,29 @@ export async function fetchArticles(
   });
 
   const results = await Promise.all(promises);
-  return results.flat();
+  const allArticles = results.flat();
+  console.log(`Total articles fetched: ${allArticles.length}`);
+
+  // If no articles found, return some fallback content
+  if (allArticles.length === 0) {
+    console.log("No articles found, returning fallback content");
+    return [
+      {
+        title: "AI Newsletter Service",
+        url: "#",
+        description:
+          "Welcome to your personalized AI newsletter! We're currently setting up your news feed.",
+        publishedAt: new Date().toISOString(),
+        author: "AI Newsletter",
+        source: "AI Newsletter",
+        urlToImage: "",
+        content:
+          "Your newsletter is being prepared with the latest news from your selected categories.",
+      },
+    ];
+  }
+
+  return allArticles;
 }
 
 // Helper function to get trending topics
