@@ -35,33 +35,72 @@ export default function DashboardPage() {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, loading: authLoading, isAuthenticated } = useAuthStore();
+
+  console.log("Dashboard component mounted/rendered");
 
   useEffect(() => {
-    if (!user) {
+    console.log(
+      "Dashboard useEffect - authLoading:",
+      authLoading,
+      "user:",
+      user?.email,
+      "isAuthenticated:",
+      isAuthenticated
+    );
+
+    // Wait for auth to finish loading
+    if (authLoading) {
+      console.log("Auth still loading, waiting...");
+      return;
+    }
+
+    // If no user after auth loading is complete, redirect to signin
+    if (!user || !isAuthenticated) {
+      console.log("No user or not authenticated, redirecting to signin");
+      // Check if we just came from a signin redirect (might need page refresh)
+      if (window.location.pathname === "/dashboard" && !user) {
+        console.log(
+          "Dashboard accessed without user, refreshing page to sync auth state"
+        );
+        window.location.reload();
+        return;
+      }
       router.replace("/signin");
       return;
     }
 
-    fetch("/api/user-preferences")
-      .then((response) => {
-        if (response && response.ok) {
-          return response.json();
-        }
-        throw new Error("Failed to fetch preferences");
-      })
-      .then((data) => {
-        if (data) {
-          setPreferences(data);
-        }
-      })
-      .catch(() => {
-        router.replace("/dashboard/preferences");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [router, user]);
+    console.log("User authenticated, fetching preferences...");
+
+    // Add a small delay to ensure auth state is fully synchronized
+    const timeoutId = setTimeout(() => {
+      // Fetch preferences only after we have a user
+      fetch("/api/user-preferences")
+        .then((response) => {
+          console.log("Preferences response:", response.status);
+          if (response && response.ok) {
+            return response.json();
+          }
+          throw new Error("Failed to fetch preferences");
+        })
+        .then((data) => {
+          console.log("Preferences data:", data);
+          if (data) {
+            setPreferences(data);
+          }
+        })
+        .catch((error) => {
+          console.log("Error fetching preferences:", error);
+          router.replace("/dashboard/preferences");
+        })
+        .finally(() => {
+          console.log("Setting loading to false");
+          setIsLoading(false);
+        });
+    }, 200); // Small delay to ensure auth state is synchronized
+
+    return () => clearTimeout(timeoutId);
+  }, [router, user, authLoading, isAuthenticated]);
 
   const handleUpdatePreferences = () => {
     router.push("/dashboard/preferences");
@@ -141,7 +180,8 @@ export default function DashboardPage() {
     return frequencyMap[frequency as keyof typeof frequencyMap] || frequency;
   };
 
-  if (isLoading) {
+  // Show loading while auth is loading or preferences are loading
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -168,7 +208,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Newsletter Dashboard
+            Sendly Dashboard
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Manage your personalized newsletter preferences and stay informed
@@ -388,9 +428,7 @@ export default function DashboardPage() {
                         </svg>
                       </div>
                       <div className="text-left">
-                        <h3 className="font-semibold text-lg">
-                          Pause Newsletter
-                        </h3>
+                        <h3 className="font-semibold text-lg">Pause Sendly</h3>
                         <p className="text-red-100 text-sm">
                           Temporarily stop delivery
                         </p>
@@ -419,9 +457,7 @@ export default function DashboardPage() {
                         </svg>
                       </div>
                       <div className="text-left">
-                        <h3 className="font-semibold text-lg">
-                          Resume Newsletter
-                        </h3>
+                        <h3 className="font-semibold text-lg">Resume Sendly</h3>
                         <p className="text-green-100 text-sm">
                           Resume newsletter delivery
                         </p>
@@ -498,8 +534,8 @@ export default function DashboardPage() {
                     Scheduled Delivery
                   </h3>
                   <p className="text-gray-600 leading-relaxed">
-                    Newsletters are delivered at your chosen frequency (daily,
-                    weekly, or bi-weekly) directly to your email.
+                    Sendly newsletters are delivered at your chosen frequency
+                    (daily, weekly, or bi-weekly) directly to your email.
                   </p>
                 </div>
               </div>

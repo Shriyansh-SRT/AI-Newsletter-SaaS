@@ -96,16 +96,41 @@ export const createUpdateUserPreferences = async (
       };
     }
 
+    // Schedule newsletter based on frequency
+    const now = new Date();
+    let scheduleTime: Date;
+
+    switch (frequency) {
+      case "daily":
+        scheduleTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        scheduleTime.setHours(9, 0, 0, 0);
+        break;
+      case "biweekly":
+        scheduleTime = new Date(now.getTime() + 3.5 * 24 * 60 * 60 * 1000);
+        scheduleTime.setHours(9, 0, 0, 0);
+        break;
+      default:
+        scheduleTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        scheduleTime.setHours(9, 0, 0, 0);
+    }
+
     // Send Inngest event to schedule newsletter
-    await inngest.send({
+    console.log("Sending Inngest event for user:", user.id, "email:", email);
+    console.log("Schedule time:", scheduleTime.toISOString());
+
+    const { ids } = await inngest.send({
       name: "newsletter.schedule",
       data: {
         userId: user.id,
         email: email,
         categories: selectedCategories,
         frequency: frequency,
+        scheduledFor: scheduleTime.toISOString(),
+        isTest: true,
       },
     });
+
+    console.log("Inngest event sent successfully, IDs:", ids);
 
     // Revalidate dashboard page to show updated data
     revalidatePath("/dashboard");

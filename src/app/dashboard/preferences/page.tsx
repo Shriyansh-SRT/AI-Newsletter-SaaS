@@ -288,7 +288,7 @@ const PreferencesPage = () => {
           </button>
           <div className="text-center">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Newsletter Preferences
+              Sendly Preferences
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
               Customize your AI-powered newsletter to get the content you want,

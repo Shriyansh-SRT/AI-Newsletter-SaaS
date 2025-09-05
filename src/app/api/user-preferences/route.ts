@@ -226,6 +226,10 @@ async function rescheduleUserNewsletter(userId: string) {
 
     nextScheduleTime.setHours(9, 0, 0, 0); // Set to 9 AM
 
+    console.log(
+      `Rescheduling newsletter for user ${userId} for: ${nextScheduleTime.toISOString()}`
+    );
+
     // Schedule the next regular newsletter
     await inngest.send({
       name: "newsletter.schedule",
@@ -241,7 +245,7 @@ async function rescheduleUserNewsletter(userId: string) {
     });
 
     console.log(
-      `Next regular newsletter scheduled for: ${nextScheduleTime.toISOString()}`
+      `Newsletter rescheduled for: ${nextScheduleTime.toISOString()}`
     );
   } catch (error) {
     console.error("Error in rescheduleUserNewsletter:", error);

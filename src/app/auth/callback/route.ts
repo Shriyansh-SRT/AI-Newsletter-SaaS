@@ -2,41 +2,29 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/signin";
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
 
-  console.log("Auth callback - Code:", code ? "present" : "missing");
-  console.log("Auth callback - Next:", next);
+  console.log("OAuth callback - code:", code ? "present" : "missing");
 
   if (code) {
-    try {
-      const supabase = await createClient();
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-      console.log("Auth callback - Exchange result:", {
-        data: !!data,
-        error: error?.message,
-      });
+    console.log(
+      "OAuth callback - exchange result:",
+      error ? "error" : "success",
+      data?.user?.email
+    );
 
-      if (!error) {
-        console.log("Auth callback - Redirecting to:", `${origin}${next}`);
-        return NextResponse.redirect(`${origin}${next}`);
-      } else {
-        console.log("Auth callback - Exchange error:", error.message);
-        return NextResponse.redirect(
-          `${origin}/signin?error=verification_failed`
-        );
-      }
-    } catch (err) {
-      console.log("Auth callback - Exception:", err);
-      return NextResponse.redirect(
-        `${origin}/signin?error=verification_failed`
-      );
+    if (!error && data?.user) {
+      // Successful OAuth login, redirect to dashboard
+      console.log("OAuth callback - redirecting to dashboard");
+      return NextResponse.redirect(requestUrl.origin + "/dashboard");
     }
   }
 
-  // No code provided
-  console.log("Auth callback - No code provided");
-  return NextResponse.redirect(`${origin}/signin?error=no_code`);
+  console.log("OAuth callback - redirecting to error page");
+  // Return the user to an error page with instructions
+  return NextResponse.redirect(requestUrl.origin + "/auth/auth-code-error");
 }

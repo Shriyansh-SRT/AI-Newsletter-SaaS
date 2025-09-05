@@ -210,3 +210,58 @@ export const logout = async () => {
     redirect("/signin");
   }
 };
+
+export const signInWithGoogle = async () => {
+  try {
+    const supabase = await createClient();
+    const redirectUrl = `${
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    }/auth/callback`;
+
+    console.log("Google OAuth - redirect URL:", redirectUrl);
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: redirectUrl,
+      },
+    });
+
+    if (error) {
+      console.error("Google OAuth error:", error);
+      throw new Error(`Failed to sign in with Google: ${error.message}`);
+    }
+
+    if (data.url) {
+      console.log("Google OAuth - redirecting to:", data.url);
+      redirect(data.url);
+    } else {
+      throw new Error("No redirect URL received from Google OAuth");
+    }
+  } catch (error) {
+    console.error("Google OAuth signin error:", error);
+    throw error;
+  }
+};
+
+export const signInWithFacebook = async () => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "facebook",
+    options: {
+      redirectTo: `${
+        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+      }/auth/callback`,
+    },
+  });
+
+  if (error) {
+    console.error("Facebook OAuth error:", error);
+    throw new Error("Failed to sign in with Facebook");
+  }
+
+  if (data.url) {
+    redirect(data.url);
+  }
+};

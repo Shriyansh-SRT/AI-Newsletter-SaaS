@@ -15,8 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Newsletter",
-  description: "Create personalized AI-powered newsletters",
+  title: "Sendly - AI Newsletter Platform",
+  description:
+    "Create personalized AI-powered newsletters with Sendly. Stay informed with curated content tailored just for you.",
 };
 
 export default function RootLayout({
@@ -28,6 +29,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true}
       >
         <AuthProvider>
           <Navbar />

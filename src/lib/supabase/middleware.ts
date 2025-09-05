@@ -15,7 +15,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
           supabaseResponse = NextResponse.next({
@@ -46,16 +46,7 @@ export async function updateSession(request: NextRequest) {
     user ? "Authenticated" : "Not authenticated"
   );
 
-  // Public routes that don't require authentication
-  const publicRoutes = [
-    "/signin",
-    "/verify-email",
-    "/auth/callback",
-    "/auth/auth-code-error",
-  ];
-  const isPublicRoute = publicRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route)
-  );
+  // Note: Public routes are now handled by authOnlyRoutes below
 
   // Protected routes that require authentication
   const protectedRoutes = ["/dashboard", "/settings", "/newsletters"];
@@ -63,24 +54,28 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith(route)
   );
 
-  // Redirect homepage to dashboard if user is authenticated
+  // Allow homepage to be accessible for both authenticated and unauthenticated users
   if (request.nextUrl.pathname === "/") {
-    console.log("Middleware - Redirecting from homepage");
-    if (user) {
-      console.log("Middleware - User authenticated, redirecting to dashboard");
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
-      return NextResponse.redirect(url);
-    } else {
-      console.log("Middleware - User not authenticated, redirecting to signin");
-      const url = request.nextUrl.clone();
-      url.pathname = "/signin";
-      return NextResponse.redirect(url);
-    }
+    console.log("Middleware - Allowing homepage access");
+    // No redirect needed - let the homepage component handle the display
+    return NextResponse.next();
   }
 
-  // Redirect authenticated users away from public routes
-  if (user && isPublicRoute) {
+  // Redirect authenticated users away from signin/auth routes (but allow homepage and preferences)
+  const authOnlyRoutes = [
+    "/signin",
+    "/verify-email",
+    "/auth/callback",
+    "/auth/auth-code-error",
+  ];
+  const isAuthOnlyRoute = authOnlyRoutes.some((route) =>
+    request.nextUrl.pathname.startsWith(route)
+  );
+
+  if (user && isAuthOnlyRoute) {
+    console.log(
+      "Middleware - Authenticated user accessing auth route, redirecting to dashboard"
+    );
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

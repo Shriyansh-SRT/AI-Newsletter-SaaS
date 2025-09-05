@@ -3,11 +3,8 @@ import { type NextRequest, NextResponse } from "next/server";
 export async function middleware(request: NextRequest) {
   console.log("Root middleware called for:", request.nextUrl.pathname);
 
-  // Simple test - redirect homepage to signin
-  if (request.nextUrl.pathname === "/") {
-    console.log("Redirecting homepage to signin");
-    return NextResponse.redirect(new URL("/signin", request.url));
-  }
+  // Allow homepage to be accessible - no redirect needed
+  // The Supabase middleware will handle auth-specific routing
 
   return NextResponse.next();
 }

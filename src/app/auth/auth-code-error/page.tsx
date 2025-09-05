@@ -1,13 +1,11 @@
-import React from "react";
 import Link from "next/link";
 
-const AuthCodeErrorPage = () => {
+export default function AuthCodeErrorPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8">
-        {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-red-100 rounded-xl flex items-center justify-center">
+          <div className="mx-auto h-12 w-12 bg-red-100 rounded-xl flex items-center justify-center mb-4">
             <svg
               className="h-6 w-6 text-red-600"
               fill="none"
@@ -22,56 +20,25 @@ const AuthCodeErrorPage = () => {
               />
             </svg>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
             Authentication Error
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            There was an issue with your authentication
+          <p className="text-gray-600 mb-6">
+            There was an error signing you in. This could be due to:
           </p>
-        </div>
-
-        {/* Content */}
-        <div className="bg-white py-8 px-6 shadow-xl rounded-2xl border border-gray-100">
-          <div className="text-center space-y-6">
-            <div className="text-gray-600">
-              <p className="mb-4">
-                We encountered an error while processing your authentication
-                request.
-              </p>
-              <p className="text-sm">
-                This could be due to an expired link or an invalid
-                authentication code.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <Link
-                href="/signin"
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
-              >
-                Try signing in again
-              </Link>
-
-              <Link
-                href="/"
-                className="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
-              >
-                Go to homepage
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center text-xs text-gray-500">
-          Need help?{" "}
-          <Link href="/support" className="text-blue-600 hover:text-blue-500">
-            Contact support
+          <ul className="text-left text-sm text-gray-600 mb-6 space-y-2">
+            <li>• The authentication was cancelled</li>
+            <li>• The session expired</li>
+            <li>• There was a network error</li>
+          </ul>
+          <Link
+            href="/signin"
+            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium"
+          >
+            Try Again
           </Link>
         </div>
       </div>
     </div>
   );
-};
-
-export default AuthCodeErrorPage;
+}
