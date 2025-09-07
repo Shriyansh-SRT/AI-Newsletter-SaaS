@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
 interface UserPreferences {
   categories: string[];
@@ -106,11 +107,11 @@ export default function DashboardPage() {
 
       if (response.ok) {
         setPreferences((prev) => (prev ? { ...prev, is_active: false } : null));
-        alert("Newsletter deactivated successfully");
+        toast.success("Newsletter deactivated successfully");
       }
     } catch (error) {
       console.error("Error deactivating newsletter:", error);
-      alert("Failed to deactivate newsletter");
+      toast.error("Failed to deactivate newsletter");
     }
   };
 
@@ -126,11 +127,11 @@ export default function DashboardPage() {
 
       if (response.ok) {
         setPreferences((prev) => (prev ? { ...prev, is_active: true } : null));
-        alert("Newsletter activated successfully");
+        toast.success("Newsletter activated successfully");
       }
     } catch (error) {
       console.error("Error activating newsletter:", error);
-      alert("Failed to activate newsletter");
+      toast.error("Failed to activate newsletter");
     }
   };
 

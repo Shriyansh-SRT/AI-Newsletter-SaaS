@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "react-hot-toast";
 import Link from "next/link";
 
 export default function SubscriptionSuccessPage() {
@@ -13,8 +14,10 @@ export default function SubscriptionSuccessPage() {
     const sessionIdParam = searchParams.get("session_id");
     if (sessionIdParam) {
       setSessionId(sessionIdParam);
+      toast.success("Payment successful! Welcome to your new plan.");
     } else {
       // If no session ID, redirect to subscription page
+      toast.error("Invalid session. Redirecting to subscription page.");
       router.push("/subscription");
     }
   }, [searchParams, router]);

@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { FaCalendarCheck } from "react-icons/fa";
 import { IoStatsChart } from "react-icons/io5";
 import { FaChartLine } from "react-icons/fa6";
+import toast from "react-hot-toast";
+
 
 // Removed UserPreferences interface - not needed for form-only component
 
@@ -244,7 +246,7 @@ const PreferencesPage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Preferences saved successfully!");
+        toast.success("Preferences saved successfully!");
         router.push("/dashboard");
       } else {
         setSubmitError(data.error || "Failed to save preferences");

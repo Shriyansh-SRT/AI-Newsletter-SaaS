@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { SubscriptionPlan } from "@/lib/subscription-plans";
 import { loadStripe } from "@stripe/stripe-js";
+import { toast } from "react-hot-toast";
 import Link from "next/link";
 
 // Initialize Stripe
@@ -50,7 +51,7 @@ export default function SubscriptionPage() {
     if (plan.id === "free") return;
 
     if (!plan.priceId) {
-      alert("Price ID is missing for this plan. Please contact support.");
+      toast.error("Price ID is missing for this plan. Please contact support.");
       return;
     }
 
@@ -84,6 +85,7 @@ export default function SubscriptionPage() {
         // Use Stripe.js to redirect to checkout
         const stripe = await stripePromise;
         if (stripe) {
+          toast.success("Redirecting to checkout...");
           const { error } = await stripe.redirectToCheckout({
             sessionId: sessionId,
           });
@@ -100,7 +102,7 @@ export default function SubscriptionPage() {
       }
     } catch (error: Error) {
       console.error("Error creating checkout session:", error);
-      alert(
+      toast.error(
         `Failed to start checkout process: ${error.message}. Please try again.`
       );
     } finally {

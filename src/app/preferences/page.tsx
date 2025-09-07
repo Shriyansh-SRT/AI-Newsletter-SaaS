@@ -6,6 +6,7 @@ import { FaCalendarCheck } from "react-icons/fa";
 import { IoStatsChart } from "react-icons/io5";
 import { FaChartLine } from "react-icons/fa6";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import toast from "react-hot-toast";
 
 const categories = [
   {
@@ -122,12 +123,12 @@ export default function PublicPreferencesPage() {
   const handleSavePreferences = () => {
     // Check if user has made selections
     if (selectedCategories.length === 0) {
-      alert("Please select at least one category");
+      toast.error("Please select at least one category");
       return;
     }
 
     if (!email) {
-      alert("Please enter your email address");
+      toast.error("Please enter your email address");
       return;
     }
 
