@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { inngest } from "@/lib/inngest/client";
+// Removed inngest import - newsletter scheduling now handled by API routes
 
 // Validation schema for user preferences
 const UserPreferencesSchema = z.object({
@@ -11,7 +11,7 @@ const UserPreferencesSchema = z.object({
     .array(z.string())
     .min(1, "At least one category is required"),
   frequency: z.enum(["daily", "weekly", "biweekly"]),
-  email: z.string().email("Invalid email address"),
+  email: z.string().email({ message: "Invalid email address" }),
 });
 
 export type UserPreferencesInput = z.infer<typeof UserPreferencesSchema>;
@@ -96,41 +96,8 @@ export const createUpdateUserPreferences = async (
       };
     }
 
-    // Schedule newsletter based on frequency
-    const now = new Date();
-    let scheduleTime: Date;
-
-    switch (frequency) {
-      case "daily":
-        scheduleTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        scheduleTime.setHours(9, 0, 0, 0);
-        break;
-      case "biweekly":
-        scheduleTime = new Date(now.getTime() + 3.5 * 24 * 60 * 60 * 1000);
-        scheduleTime.setHours(9, 0, 0, 0);
-        break;
-      default:
-        scheduleTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        scheduleTime.setHours(9, 0, 0, 0);
-    }
-
-    // Send Inngest event to schedule newsletter
-    console.log("Sending Inngest event for user:", user.id, "email:", email);
-    console.log("Schedule time:", scheduleTime.toISOString());
-
-    const { ids } = await inngest.send({
-      name: "newsletter.schedule",
-      data: {
-        userId: user.id,
-        email: email,
-        categories: selectedCategories,
-        frequency: frequency,
-        scheduledFor: scheduleTime.toISOString(),
-        isTest: true,
-      },
-    });
-
-    console.log("Inngest event sent successfully, IDs:", ids);
+    // Note: Newsletter scheduling is now handled by API routes
+    // This prevents duplicate Inngest events
 
     // Revalidate dashboard page to show updated data
     revalidatePath("/dashboard");

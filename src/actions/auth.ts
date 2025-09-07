@@ -244,24 +244,4 @@ export const signInWithGoogle = async () => {
   }
 };
 
-export const signInWithFacebook = async () => {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "facebook",
-    options: {
-      redirectTo: `${
-        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-      }/auth/callback`,
-    },
-  });
-
-  if (error) {
-    console.error("Facebook OAuth error:", error);
-    throw new Error("Failed to sign in with Facebook");
-  }
-
-  if (data.url) {
-    redirect(data.url);
-  }
-};
+// Removed Facebook OAuth - keeping only Google login

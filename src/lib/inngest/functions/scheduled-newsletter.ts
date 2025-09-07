@@ -53,21 +53,8 @@ export default inngest.createFunction(
       const newsletterContent = await step.run(
         "generate-newsletter",
         async () => {
-          console.log("Generating newsletter using template...");
-          console.log("Total articles available:", allArticles.length);
-          console.log(
-            "Article titles:",
-            allArticles.map((a) => a.title)
-          );
-
           const date = new Date().toLocaleDateString();
           const topArticles = allArticles.slice(0, 5);
-
-          console.log("Top articles selected:", topArticles.length);
-          console.log(
-            "Top article titles:",
-            topArticles.map((a) => a.title)
-          );
 
           return `# Your Personalized Newsletter
 
@@ -129,8 +116,6 @@ ${topArticles
         const subject = `Your ${event.data.frequency} newsletter from Sendly`;
 
         try {
-          console.log("Sending email via Resend...");
-
           const { data, error } = await resend.emails.send({
             from: "onboarding@resend.dev", // Use this for testing
             to: [event.data.email],
@@ -352,27 +337,34 @@ ${topArticles
           const now = new Date();
           let nextScheduleTime: Date;
 
-          switch (event.data.frequency) {
-            case "daily":
-              nextScheduleTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-              break;
-            case "weekly":
-              nextScheduleTime = new Date(
-                now.getTime() + 7 * 24 * 60 * 60 * 1000
-              );
-              break;
-            case "biweekly":
-              nextScheduleTime = new Date(
-                now.getTime() + 14 * 24 * 60 * 60 * 1000
-              );
-              break;
-            default:
-              nextScheduleTime = new Date(
-                now.getTime() + 7 * 24 * 60 * 60 * 1000
-              );
+          // If scheduledFor is provided, use it; otherwise calculate based on frequency
+          if (event.data.scheduledFor) {
+            nextScheduleTime = new Date(event.data.scheduledFor);
+          } else {
+            // Calculate next schedule time based on frequency
+            switch (event.data.frequency) {
+              case "daily":
+                nextScheduleTime = new Date(
+                  now.getTime() + 24 * 60 * 60 * 1000
+                );
+                break;
+              case "weekly":
+                nextScheduleTime = new Date(
+                  now.getTime() + 7 * 24 * 60 * 60 * 1000
+                );
+                break;
+              case "biweekly":
+                nextScheduleTime = new Date(
+                  now.getTime() + 14 * 24 * 60 * 60 * 1000
+                );
+                break;
+              default:
+                nextScheduleTime = new Date(
+                  now.getTime() + 7 * 24 * 60 * 60 * 1000
+                );
+            }
+            nextScheduleTime.setHours(9, 0, 0, 0);
           }
-
-          nextScheduleTime.setHours(9, 0, 0, 0);
 
           // Schedule the next newsletter
           await inngest.send({
@@ -382,7 +374,6 @@ ${topArticles
               email: event.data.email,
               categories: event.data.categories,
               frequency: event.data.frequency,
-              scheduledFor: nextScheduleTime.toISOString(),
             },
             ts: nextScheduleTime.getTime(),
           });

@@ -72,7 +72,7 @@ export function Navbar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-8 w-8 cursor-pointer">
                   <AvatarImage
                     src={user?.user_metadata?.avatar_url}
                     alt={user?.email || "User"}
@@ -95,8 +95,8 @@ export function Navbar() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut}>
-                <LogOut className="mr-2 h-4 w-4" />
+              <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4 cursor-pointer" />
                 <span>Log out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -40,15 +40,6 @@ export default function DashboardPage() {
   console.log("Dashboard component mounted/rendered");
 
   useEffect(() => {
-    console.log(
-      "Dashboard useEffect - authLoading:",
-      authLoading,
-      "user:",
-      user?.email,
-      "isAuthenticated:",
-      isAuthenticated
-    );
-
     // Wait for auth to finish loading
     if (authLoading) {
       console.log("Auth still loading, waiting...");
@@ -69,9 +60,6 @@ export default function DashboardPage() {
       router.replace("/signin");
       return;
     }
-
-    console.log("User authenticated, fetching preferences...");
-
     // Add a small delay to ensure auth state is fully synchronized
     const timeoutId = setTimeout(() => {
       // Fetch preferences only after we have a user
@@ -217,7 +205,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Current Preferences Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8 backdrop-blur-sm bg-white/80">
+        <div className="w-full rounded-xl shadow-sm border border-gray-200 p-8 mb-8 backdrop-blur-sm bg-white/80">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-2xl font-semibold text-gray-900 mb-2">
@@ -365,7 +353,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8 backdrop-blur-sm bg-white/80">
+        <div className="w-full rounded-xl shadow-sm border border-gray-200 p-8 mb-8 backdrop-blur-sm bg-white/80">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">
               Actions
@@ -377,7 +365,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <button
               onClick={handleUpdatePreferences}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105"
+              className="cursor-pointer group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105"
             >
               <div className="flex items-center justify-center">
                 <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mr-4">
@@ -409,7 +397,7 @@ export default function DashboardPage() {
                 {preferences.is_active ? (
                   <button
                     onClick={handleDeactivateNewsletter}
-                    className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-red-600 to-red-700 p-6 text-white hover:from-red-700 hover:to-red-800 transition-all duration-200 transform hover:scale-105"
+                    className="cursor-pointer group relative overflow-hidden rounded-xl bg-gradient-to-r from-red-600 to-red-700 p-6 text-white hover:from-red-700 hover:to-red-800 transition-all duration-200 transform hover:scale-105"
                   >
                     <div className="flex items-center justify-center">
                       <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mr-4">
@@ -469,7 +457,7 @@ export default function DashboardPage() {
             )}
 
             <Link
-              href="/dashboard/preferences"
+              href="/subscription"
               className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-gray-600 to-gray-700 p-6 text-white hover:from-gray-700 hover:to-gray-800 transition-all duration-200 transform hover:scale-105"
             >
               <div className="flex items-center justify-center">

@@ -1,25 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useActionState } from "react";
-import { createUpdateUserPreferences } from "@/actions/userpreference";
+// Removed server action import - now using API routes
 import { FaCalendarCheck } from "react-icons/fa";
 import { IoStatsChart } from "react-icons/io5";
 import { FaChartLine } from "react-icons/fa6";
 
-interface UserPreferences {
-  id: string;
-  user_id: string;
-  categories: string[];
-  frequency: "daily" | "weekly" | "biweekly";
-  email: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Removed UserPreferences interface - not needed for form-only component
 
 // Skeleton Loading Component
 const SkeletonPreferences = () => (
@@ -172,7 +162,7 @@ const PreferencesPage = () => {
   const getSession = useAuthStore((state) => state.getSession);
   const user = useAuthStore((state) => state.user);
   const router = useRouter();
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  // Removed preferences state - not needed for form-only component
   const [loading, setLoading] = useState(true);
 
   // Form state
@@ -181,36 +171,13 @@ const PreferencesPage = () => {
     "weekly"
   );
   const [email, setEmail] = useState("");
-  const [customCategory, setCustomCategory] = useState("");
+  // Removed custom category functionality - no delete feature
 
-  // Server action state
-  const initialState = { error: null, success: false, message: null };
-  const [state, formAction] = useActionState(
-    createUpdateUserPreferences,
-    initialState
-  );
+  // Form submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  useEffect(() => {
-    getSession();
-  }, [getSession]);
-
-  useEffect(() => {
-    if (user) {
-      fetchUserPreferences();
-    }
-  }, [user]);
-
-  // Handle server action response
-  useEffect(() => {
-    if (state.success) {
-      alert(state.message || "Preferences saved successfully!");
-      router.push("/dashboard");
-    } else if (state.error) {
-      alert(state.error);
-    }
-  }, [state, router]);
-
-  const fetchUserPreferences = async () => {
+  const fetchUserPreferences = useCallback(async () => {
     try {
       const supabase = createClient();
       const { data, error } = await supabase
@@ -224,7 +191,6 @@ const PreferencesPage = () => {
       }
 
       if (data) {
-        setPreferences(data);
         setSelectedCategories(data.categories);
         setFrequency(data.frequency);
         setEmail(data.email || "");
@@ -238,6 +204,57 @@ const PreferencesPage = () => {
     } finally {
       setLoading(false);
     }
+  }, [user?.id, user?.email]);
+
+  useEffect(() => {
+    getSession();
+  }, [getSession]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserPreferences();
+    }
+  }, [user, fetchUserPreferences]);
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (selectedCategories.length === 0) {
+      setSubmitError("Please select at least one category");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const response = await fetch("/api/user-preferences", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          categories: selectedCategories,
+          frequency: frequency,
+          email: email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("Preferences saved successfully!");
+        router.push("/dashboard");
+      } else {
+        setSubmitError(data.error || "Failed to save preferences");
+      }
+    } catch (error) {
+      console.error("Error saving preferences:", error);
+      setSubmitError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCategoryToggle = (categoryId: string) => {
@@ -248,15 +265,7 @@ const PreferencesPage = () => {
     );
   };
 
-  const handleAddCustomCategory = () => {
-    if (
-      customCategory.trim() &&
-      !selectedCategories.includes(customCategory.trim())
-    ) {
-      setSelectedCategories((prev) => [...prev, customCategory.trim()]);
-      setCustomCategory("");
-    }
-  };
+  // Removed handleAddCustomCategory - no delete functionality
 
   if (loading) {
     return <SkeletonPreferences />;
@@ -269,7 +278,7 @@ const PreferencesPage = () => {
         <div className="mb-8">
           <button
             onClick={() => router.back()}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+            className="flex items-center text-gray-600 hover:text-gray-900 mb-6 transition-colors cursor-pointer"
           >
             <svg
               className="w-5 h-5 mr-2"
@@ -298,21 +307,9 @@ const PreferencesPage = () => {
         </div>
 
         <form
-          action={formAction}
+          onSubmit={handleSubmit}
           className="bg-white rounded-xl shadow-sm border border-gray-200 p-8"
         >
-          {/* Hidden form fields for server action */}
-          {selectedCategories.map((category) => (
-            <input
-              key={category}
-              type="hidden"
-              name="categories"
-              value={category}
-            />
-          ))}
-          <input type="hidden" name="frequency" value={frequency} />
-          <input type="hidden" name="email" value={email} />
-
           {/* Categories Section */}
           <div className="mb-10">
             <div className="text-center mb-8">
@@ -374,32 +371,6 @@ const PreferencesPage = () => {
                   </div>
                 </label>
               ))}
-            </div>
-
-            {/* Custom Category */}
-            <div className="mt-6">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3 text-center">
-                Add Custom Category
-              </h3>
-              <div className="flex gap-3 max-w-md mx-auto">
-                <input
-                  type="text"
-                  value={customCategory}
-                  onChange={(e) => setCustomCategory(e.target.value)}
-                  placeholder="Enter custom category..."
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  onKeyPress={(e) =>
-                    e.key === "Enter" && handleAddCustomCategory()
-                  }
-                />
-                <button
-                  type="button"
-                  onClick={handleAddCustomCategory}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium"
-                >
-                  Add
-                </button>
-              </div>
             </div>
 
             <div className="text-sm text-gray-600 text-center mt-4">
@@ -488,6 +459,13 @@ const PreferencesPage = () => {
             </div>
           </div>
 
+          {/* Error Display */}
+          {submitError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{submitError}</p>
+            </div>
+          )}
+
           {/* Submit Section */}
           <div className="flex items-center justify-between pt-6 border-t border-gray-200">
             <div className="text-sm text-gray-600">
@@ -499,20 +477,21 @@ const PreferencesPage = () => {
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium"
+                className="cursor-pointer px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={selectedCategories.length === 0}
-                className={`px-6 py-3 rounded-lg font-medium text-white transition-all duration-200 ${
-                  selectedCategories.length === 0
+                disabled={selectedCategories.length === 0 || isSubmitting}
+                className={`px-6 py-3 rounded-lg font-medium text-white transition-all duration-200 cursor-pointer ${
+                  selectedCategories.length === 0 || isSubmitting
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"
                 }`}
               >
-                Save Preferences
+                {isSubmitting ? "Saving..." : "Save Preferences"}
               </button>
             </div>
           </div>

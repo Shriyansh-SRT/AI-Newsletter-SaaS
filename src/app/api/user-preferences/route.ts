@@ -57,32 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Schedule the first newsletter based on frequency
-    let scheduleTime: Date;
-    const now = new Date();
-
-    switch (frequency) {
-      case "daily":
-        // Schedule for tomorrow at 9 AM
-        scheduleTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        scheduleTime.setHours(9, 0, 0, 0);
-        break;
-      case "weekly":
-        // Schedule for next week on the same day at 9 AM
-        scheduleTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        scheduleTime.setHours(9, 0, 0, 0);
-        break;
-      case "biweekly":
-        // Schedule for 14 days from now at 9 AM
-        scheduleTime = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-        scheduleTime.setHours(9, 0, 0, 0);
-        break;
-      default:
-        scheduleTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        scheduleTime.setHours(9, 0, 0, 0);
-    }
-
-    // Send event to Inngest to schedule the newsletter
+    // Schedule the first newsletter - let Inngest handle the timing
     const { ids } = await inngest.send({
       name: "newsletter.schedule",
       data: {
@@ -90,8 +65,7 @@ export async function POST(request: NextRequest) {
         email: email,
         categories: categories,
         frequency: frequency,
-        scheduledFor: scheduleTime.toISOString(),
-        isTest: true,
+        isTest: process.env.NODE_ENV !== "production", // Test mode only in development
       },
     });
 
@@ -145,7 +119,26 @@ export async function PATCH(request: NextRequest) {
     // If reactivating the newsletter, schedule the next one
     if (is_active) {
       try {
-        await rescheduleUserNewsletter(user.id);
+        // Get user preferences for rescheduling
+        const { data: preferences, error: prefError } = await supabase
+          .from("user_preferences")
+          .select("categories, frequency, email")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!prefError && preferences) {
+          // Schedule immediate newsletter (let Inngest handle timing)
+          await inngest.send({
+            name: "newsletter.schedule",
+            data: {
+              userId: user.id,
+              email: preferences.email,
+              categories: preferences.categories,
+              frequency: preferences.frequency,
+              isTest: process.env.NODE_ENV !== "production", // Test mode only in development
+            },
+          });
+        }
       } catch (rescheduleError) {
         console.error("Error rescheduling newsletter:", rescheduleError);
         // Don't fail the request if rescheduling fails, just log it
@@ -165,94 +158,9 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// Function to reschedule newsletter for a user when they reactivate
-async function rescheduleUserNewsletter(userId: string) {
-  const supabase = await createClient();
+// Removed rescheduleUserNewsletter function - scheduling now handled by Inngest
 
-  try {
-    // Get user preferences
-    const { data: preferences, error } = await supabase
-      .from("user_preferences")
-      .select("categories, frequency, email")
-      .eq("user_id", userId)
-      .single();
-
-    if (error || !preferences) {
-      throw new Error("User preferences not found");
-    }
-
-    // When resuming, send newsletter immediately (within 5 minutes)
-    const now = new Date();
-    const immediateScheduleTime = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
-
-    console.log(
-      `Rescheduling newsletter for user ${userId} to send immediately`
-    );
-
-    // Schedule the immediate newsletter
-    await inngest.send({
-      name: "newsletter.schedule",
-      data: {
-        userId: userId,
-        email: preferences.email,
-        categories: preferences.categories,
-        frequency: preferences.frequency,
-        scheduledFor: immediateScheduleTime.toISOString(),
-        isTest: false,
-      },
-      ts: immediateScheduleTime.getTime(),
-    });
-
-    console.log(
-      `Immediate newsletter scheduled for: ${immediateScheduleTime.toISOString()}`
-    );
-
-    // Also schedule the next regular newsletter based on frequency
-    let nextScheduleTime: Date;
-
-    switch (preferences.frequency) {
-      case "daily":
-        nextScheduleTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        break;
-      case "weekly":
-        nextScheduleTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        break;
-      case "biweekly":
-        nextScheduleTime = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        nextScheduleTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    }
-
-    nextScheduleTime.setHours(9, 0, 0, 0); // Set to 9 AM
-
-    console.log(
-      `Rescheduling newsletter for user ${userId} for: ${nextScheduleTime.toISOString()}`
-    );
-
-    // Schedule the next regular newsletter
-    await inngest.send({
-      name: "newsletter.schedule",
-      data: {
-        userId: userId,
-        email: preferences.email,
-        categories: preferences.categories,
-        frequency: preferences.frequency,
-        scheduledFor: nextScheduleTime.toISOString(),
-        isTest: false,
-      },
-      ts: nextScheduleTime.getTime(),
-    });
-
-    console.log(
-      `Newsletter rescheduled for: ${nextScheduleTime.toISOString()}`
-    );
-  } catch (error) {
-    console.error("Error in rescheduleUserNewsletter:", error);
-    throw error;
-  }
-}
-
+// get user preferences
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
 

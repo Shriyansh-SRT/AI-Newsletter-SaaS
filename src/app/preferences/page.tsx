@@ -9,34 +9,55 @@ import { useAuthStore } from "@/lib/stores/auth-store";
 
 const categories = [
   {
-    id: "technology",
-    name: "Technology",
-    description: "Latest tech news and innovations",
+    id: "artificial intelligence",
+    name: "Artificial Intelligence",
+    description: "AI breakthroughs and machine learning",
   },
   {
-    id: "business",
-    name: "Business",
-    description: "Business trends and market updates",
+    id: "machine learning",
+    name: "Machine Learning",
+    description: "ML algorithms and data science",
   },
   {
-    id: "science",
-    name: "Science",
-    description: "Scientific discoveries and research",
-  },
-  { id: "health", name: "Health", description: "Health and wellness news" },
-  { id: "sports", name: "Sports", description: "Sports news and highlights" },
-  {
-    id: "entertainment",
-    name: "Entertainment",
-    description: "Movies, music, and celebrity news",
+    id: "blockchain",
+    name: "Blockchain",
+    description: "Cryptocurrency and Web3 news",
   },
   {
-    id: "politics",
-    name: "Politics",
-    description: "Political news and analysis",
+    id: "cybersecurity",
+    name: "Cybersecurity",
+    description: "Security threats and protection",
   },
-  { id: "world", name: "World", description: "International news and events" },
-  { id: "startups", name: "Startups", description: "Tech startup ecosystem" },
+  {
+    id: "quantum computing",
+    name: "Quantum Computing",
+    description: "Quantum technology advances",
+  },
+  {
+    id: "robotics",
+    name: "Robotics",
+    description: "Automation and robotics news",
+  },
+  {
+    id: "augmented reality",
+    name: "Augmented Reality",
+    description: "AR/VR and immersive tech",
+  },
+  {
+    id: "cloud computing",
+    name: "Cloud Computing",
+    description: "Cloud infrastructure and services",
+  },
+  {
+    id: "data science",
+    name: "Data Science",
+    description: "Big data and analytics",
+  },
+  {
+    id: "startups",
+    name: "Startups",
+    description: "Tech startup ecosystem",
+  },
   {
     id: "fintech",
     name: "Fintech",
@@ -46,6 +67,38 @@ const categories = [
     id: "biotechnology",
     name: "Biotechnology",
     description: "Bio-tech and health tech",
+  },
+  {
+    id: "technology",
+    name: "Technology",
+    description: "Latest tech news and innovations",
+  },
+  {
+    id: "business",
+    name: "Business",
+    description: "Business trends and market updates",
+  },
+  { id: "sports", name: "Sports", description: "Sports news and highlights" },
+  {
+    id: "entertainment",
+    name: "Entertainment",
+    description: "Movies, TV, and celebrity news",
+  },
+  {
+    id: "science",
+    name: "Science",
+    description: "Scientific discoveries and research",
+  },
+  { id: "health", name: "Health", description: "Health and wellness updates" },
+  {
+    id: "politics",
+    name: "Politics",
+    description: "Political news and current events",
+  },
+  {
+    id: "environment",
+    name: "Environment",
+    description: "Climate and environmental news",
   },
 ];
 
@@ -78,19 +131,9 @@ export default function PublicPreferencesPage() {
       return;
     }
 
-    // Store preferences in localStorage temporarily
-    const preferences = {
-      categories: selectedCategories,
-      frequency,
-      email,
-      timestamp: Date.now(),
-    };
-
-    localStorage.setItem("sendly_preferences", JSON.stringify(preferences));
-
-    // Redirect to signin with a message
+    // Simply redirect to signin - user will set preferences after authentication
     router.push(
-      "/signin?message=Please sign in to save your newsletter preferences"
+      "/signin?message=Please sign in to create your newsletter preferences"
     );
   };
 
@@ -136,10 +179,10 @@ export default function PublicPreferencesPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Customize Your Newsletter
+            Preview Your Newsletter
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Choose your interests and preferences to create your perfect
+            Explore the categories and settings available for your personalized
             AI-curated newsletter
           </p>
         </div>
@@ -150,8 +193,8 @@ export default function PublicPreferencesPage() {
             What topics interest you?
           </h2>
           <p className="text-gray-600 mb-8">
-            Select all the categories you'd like to receive news about. You can
-            change these anytime.
+            Select all the categories you&apos;d like to receive news about. You
+            can change these anytime.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -248,21 +291,21 @@ export default function PublicPreferencesPage() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <p className="text-sm text-gray-600 mt-2">
-              We'll use this email to send your personalized newsletter
+              We&apos;ll use this email to send your personalized newsletter
             </p>
           </div>
         </div>
 
-        {/* Save Button */}
+        {/* Get Started Button */}
         <div className="text-center">
           <button
             onClick={handleSavePreferences}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-all transform hover:scale-105"
           >
-            Create My Newsletter
+            Get Started
           </button>
           <p className="text-sm text-gray-600 mt-4">
-            You'll be asked to create an account to save your preferences
+            Sign up to create your personalized newsletter with these settings
           </p>
         </div>
       </div>
