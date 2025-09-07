@@ -1,8 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
-
-export default async function Instruments() {
-  const supabase = await createClient();
-  const { data: instruments } = await supabase.from("instruments").select();
-
-  return <pre>{JSON.stringify(instruments, null, 2)}</pre>;
+export default function Instruments() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+          Instruments Page
+        </h1>
+        <p className="text-gray-600">This page is under development.</p>
+      </div>
+    </div>
+  );
 }

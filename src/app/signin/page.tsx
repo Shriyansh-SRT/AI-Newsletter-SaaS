@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signInWithGoogle } from "@/actions/auth";
@@ -17,7 +17,7 @@ const initialState: SignInProps = {
   },
 };
 
-const SignInPage = () => {
+const SignInContent = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [state, formAction, isPending] = useActionState(signIn, initialState);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
@@ -365,6 +365,23 @@ const SignInPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const SignInPage = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <SignInContent />
+    </Suspense>
   );
 };
 

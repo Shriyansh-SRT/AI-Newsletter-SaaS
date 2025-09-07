@@ -100,10 +100,12 @@ export default function SubscriptionPage() {
       } else {
         throw new Error("No session ID received");
       }
-    } catch (error: Error) {
+    } catch (error: unknown) {
       console.error("Error creating checkout session:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
       toast.error(
-        `Failed to start checkout process: ${error.message}. Please try again.`
+        `Failed to start checkout process: ${errorMessage}. Please try again.`
       );
     } finally {
       setLoading(null);
