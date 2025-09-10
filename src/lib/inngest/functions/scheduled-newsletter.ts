@@ -14,10 +14,13 @@ export default inngest.createFunction(
         console.log(`Checking user status for userId: ${event.data.userId}`);
 
         const supabase = createInngestClient();
-        const { data, error } = await supabase.rpc(
-          "check_user_newsletter_status",
-          { user_uuid: event.data.userId }
-        );
+
+        // Directly query user_preferences table (RLS disabled)
+        const { data, error } = await supabase
+          .from("user_preferences")
+          .select("is_active, categories, frequency, email")
+          .eq("user_id", event.data.userId)
+          .single();
 
         if (error) {
           console.error("Error checking user status:", error);
@@ -36,20 +39,14 @@ export default inngest.createFunction(
 
         console.log(`User ${event.data.userId} preferences:`, data);
 
-        // The function returns an array, so we need to get the first result
-        const userPrefs = data && data.length > 0 ? data[0] : null;
-
-        if (!userPrefs) {
+        if (!data) {
           console.log("No user preferences found, assuming active (fallback)");
           return true;
         }
 
-        console.log(
-          `User ${event.data.userId} is_active:`,
-          userPrefs.is_active
-        );
+        console.log(`User ${event.data.userId} is_active:`, data.is_active);
 
-        return userPrefs.is_active || false;
+        return data.is_active || false;
       });
 
       // If user has paused their newsletter, exit early
