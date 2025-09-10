@@ -82,29 +82,18 @@ export async function POST(request: NextRequest) {
         });
         ids = localIds;
       } else {
-        // Use new webhook URL for production
-        const response = await fetch(
-          "https://inn.gs/e/hXBbOCiyPJ9d1OWEKDS3I1pRPZAWXlhkvNhFQwS1QZXxVvCyNsDOJLyw9FYp89KeZ3IfCT38t_FZRvoqsbXJYQ",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              name: "newsletter.schedule",
-              data: {
-                userId: user.id,
-                email: email,
-                categories: categories,
-                frequency: frequency,
-                isTest: false,
-              },
-            }),
-          }
-        );
-
-        const result = await response.json();
-        ids = [result.id || "direct-event"];
+        // Use Inngest client for production (proper way)
+        const result = await inngest.send({
+          name: "newsletter.schedule",
+          data: {
+            userId: user.id,
+            email: email,
+            categories: categories,
+            frequency: frequency,
+            isTest: true, // Send immediate newsletter in production too
+          },
+        });
+        ids = result.ids;
       }
 
       return NextResponse.json({
