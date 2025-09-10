@@ -64,37 +64,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Schedule the first newsletter - let Inngest handle the timing
+    // Schedule the first newsletter - use Inngest client consistently
     try {
-      let ids;
-
-      if (process.env.NODE_ENV === "development") {
-        // Use local Inngest dev server
-        const { ids: localIds } = await inngest.send({
-          name: "newsletter.schedule",
-          data: {
-            userId: user.id,
-            email: email,
-            categories: categories,
-            frequency: frequency,
-            isTest: true,
-          },
-        });
-        ids = localIds;
-      } else {
-        // Use Inngest client for production (proper way)
-        const result = await inngest.send({
-          name: "newsletter.schedule",
-          data: {
-            userId: user.id,
-            email: email,
-            categories: categories,
-            frequency: frequency,
-            isTest: true, // Send immediate newsletter in production too
-          },
-        });
-        ids = result.ids;
-      }
+      // Use Inngest client consistently for both dev and production
+      const { ids } = await inngest.send({
+        name: "newsletter.schedule",
+        data: {
+          userId: user.id,
+          email: email,
+          categories: categories,
+          frequency: frequency,
+          isTest: process.env.NODE_ENV === "development", // Only test in dev
+        },
+      });
 
       return NextResponse.json({
         success: true,
