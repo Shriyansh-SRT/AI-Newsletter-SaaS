@@ -65,22 +65,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Schedule the first newsletter - let Inngest handle the timing
-    const { ids } = await inngest.send({
-      name: "newsletter.schedule",
-      data: {
-        userId: user.id,
-        email: email, // Use the email from the form
-        categories: categories,
-        frequency: frequency,
-        isTest: process.env.NODE_ENV !== "production", // Test mode only in development
-      },
-    });
+    try {
+      const { ids } = await inngest.send({
+        name: "newsletter.schedule",
+        data: {
+          userId: user.id,
+          email: email, // Use the email from the form
+          categories: categories,
+          frequency: frequency,
+          isTest: process.env.NODE_ENV !== "production", // Test mode only in development
+        },
+      });
 
-    return NextResponse.json({
-      success: true,
-      message: "Preferences saved and newsletter scheduled",
-      scheduleId: ids[0],
-    });
+      return NextResponse.json({
+        success: true,
+        message: "Preferences saved and newsletter scheduled",
+        scheduleId: ids[0],
+      });
+    } catch (inngestError) {
+      console.error("Inngest scheduling failed:", inngestError);
+      // Still return success for preferences saving
+      return NextResponse.json({
+        success: true,
+        message:
+          "Preferences saved successfully (newsletter scheduling failed)",
+        warning: "Newsletter scheduling is temporarily unavailable",
+      });
+    }
   } catch (error) {
     console.error("Error in user-preferences API:", error);
     return NextResponse.json(
@@ -135,16 +146,21 @@ export async function PATCH(request: NextRequest) {
 
         if (!prefError && preferences) {
           // Schedule immediate newsletter (let Inngest handle timing)
-          await inngest.send({
-            name: "newsletter.schedule",
-            data: {
-              userId: user.id,
-              email: preferences.email, // Use the stored email from preferences
-              categories: preferences.categories,
-              frequency: preferences.frequency,
-              isTest: process.env.NODE_ENV !== "production", // Test mode only in development
-            },
-          });
+          try {
+            await inngest.send({
+              name: "newsletter.schedule",
+              data: {
+                userId: user.id,
+                email: preferences.email, // Use the stored email from preferences
+                categories: preferences.categories,
+                frequency: preferences.frequency,
+                isTest: process.env.NODE_ENV !== "production", // Test mode only in development
+              },
+            });
+          } catch (inngestError) {
+            console.error("Inngest rescheduling failed:", inngestError);
+            // Don't fail the request if Inngest fails
+          }
         }
       } catch (rescheduleError) {
         console.error("Error rescheduling newsletter:", rescheduleError);
