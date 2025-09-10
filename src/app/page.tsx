@@ -39,10 +39,12 @@ export default function HomePage() {
               {isAuthenticated ? (
                 <>
                   <Link href="/dashboard">
-                    <Button variant="ghost">Dashboard</Button>
+                    <Button variant="ghost" className="cursor-pointer">
+                      Dashboard
+                    </Button>
                   </Link>
                   <Link href="/dashboard">
-                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 cursor-pointer">
                       Go to Dashboard
                     </Button>
                   </Link>
@@ -50,10 +52,12 @@ export default function HomePage() {
               ) : (
                 <>
                   <Link href="/signin">
-                    <Button variant="ghost">Sign In</Button>
+                    <Button variant="ghost" className="cursor-pointer">
+                      Sign In
+                    </Button>
                   </Link>
                   <Link href="/preferences">
-                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                    <Button className="cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                       Get Started
                     </Button>
                   </Link>
@@ -94,19 +98,12 @@ export default function HomePage() {
                 <Link href="/preferences">
                   <Button
                     size="lg"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-3"
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-3 cursor-pointer"
                   >
                     Start Your Newsletter
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg px-8 py-3"
-                >
-                  Watch Demo
-                </Button>
               </>
             )}
           </div>
@@ -245,7 +242,7 @@ export default function HomePage() {
             <Link href="/dashboard">
               <Button
                 size="lg"
-                className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-3"
+                className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-3 cursor-pointer"
               >
                 Go to Dashboard
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -255,7 +252,7 @@ export default function HomePage() {
             <Link href="/preferences">
               <Button
                 size="lg"
-                className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-3"
+                className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-3 cursor-pointer"
               >
                 Get Started Free
                 <ArrowRight className="ml-2 h-5 w-5" />

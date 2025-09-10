@@ -1,8 +1,8 @@
 import { inngest } from "@/lib/inngest/client";
-import { fetchArticles } from "@/lib/utils/news";
+import { fetchArticles, NewsArticle } from "@/lib/utils/news";
 import { Resend } from "resend";
 import { marked } from "marked";
-import { createClient } from "@/lib/supabase/server";
+import { createInngestClient } from "@/lib/supabase/inngest";
 
 export default inngest.createFunction(
   { id: "newsletter/scheduled" },
@@ -11,19 +11,45 @@ export default inngest.createFunction(
     try {
       // 0️⃣ Check if user's newsletter is still active
       const isUserActive = await step.run("check-user-status", async () => {
-        const supabase = await createClient();
-        const { data, error } = await supabase
-          .from("user_preferences")
-          .select("is_active")
-          .eq("user_id", event.data.userId)
-          .single();
+        console.log(`Checking user status for userId: ${event.data.userId}`);
+
+        const supabase = createInngestClient();
+        const { data, error } = await supabase.rpc(
+          "check_user_newsletter_status",
+          { user_uuid: event.data.userId }
+        );
 
         if (error) {
           console.error("Error checking user status:", error);
+          console.error("Error details:", JSON.stringify(error, null, 2));
+
+          // If it's a "not found" error, assume user is active (fallback)
+          if (error.code === "PGRST116") {
+            console.log(
+              "User preferences not found, assuming active (fallback)"
+            );
+            return true;
+          }
+
           return false;
         }
 
-        return data?.is_active || false;
+        console.log(`User ${event.data.userId} preferences:`, data);
+
+        // The function returns an array, so we need to get the first result
+        const userPrefs = data && data.length > 0 ? data[0] : null;
+
+        if (!userPrefs) {
+          console.log("No user preferences found, assuming active (fallback)");
+          return true;
+        }
+
+        console.log(
+          `User ${event.data.userId} is_active:`,
+          userPrefs.is_active
+        );
+
+        return userPrefs.is_active || false;
       });
 
       // If user has paused their newsletter, exit early
@@ -50,44 +76,101 @@ export default inngest.createFunction(
       });
 
       // 2️⃣ Generate newsletter content (template-based, no AI required)
-      const newsletterContent = await step.run(
+      const { newsletterContent, selectedArticles } = await step.run(
         "generate-newsletter",
         async () => {
           const date = new Date().toLocaleDateString();
-          const topArticles = allArticles.slice(0, 5);
 
-          return `# Your Personalized Newsletter
+          // Group articles by category and select 2 per category
+          const articlesByCategory: { [key: string]: NewsArticle[] } = {};
 
-## 📰 Top Stories This Week
+          // Initialize categories
+          event.data.categories.forEach((category: string) => {
+            articlesByCategory[category] = [];
+          });
 
-${topArticles
-  .map(
-    (article, index) => `
-### ${index + 1}. ${article.title}
+          // Distribute articles to categories
+          allArticles.forEach((article) => {
+            // Find which category this article belongs to
+            const matchingCategory = event.data.categories.find(
+              (category: string) =>
+                article.title.toLowerCase().includes(category.toLowerCase()) ||
+                article.description
+                  .toLowerCase()
+                  .includes(category.toLowerCase())
+            );
 
-${article.description || "No description available for this article."}
+            if (
+              matchingCategory &&
+              articlesByCategory[matchingCategory].length < 2
+            ) {
+              articlesByCategory[matchingCategory].push(article);
+            }
+          });
 
-**Source:** ${article.source || "Unknown"}
-**Published:** ${
-      article.publishedAt
-        ? new Date(article.publishedAt).toLocaleDateString()
-        : "Unknown date"
-    }
-**Read more:** [${article.title}](${article.url})
-`
-  )
-  .join("\n")}
+          // If we don't have enough categorized articles, fill with remaining articles
+          const remainingArticles = allArticles.filter(
+            (article) =>
+              !Object.values(articlesByCategory).flat().includes(article)
+          );
+
+          // Fill up categories that don't have 2 articles yet
+          event.data.categories.forEach((category: string) => {
+            while (
+              articlesByCategory[category].length < 2 &&
+              remainingArticles.length > 0
+            ) {
+              articlesByCategory[category].push(remainingArticles.shift()!);
+            }
+          });
+
+          // Create newsletter content with articles grouped by category
+          let newsletterSections = "";
+          let totalArticlesInNewsletter = 0;
+
+          event.data.categories.forEach((category: string) => {
+            const categoryArticles = articlesByCategory[category];
+            if (categoryArticles.length > 0) {
+              newsletterSections += `\n## 📰 ${
+                category.charAt(0).toUpperCase() + category.slice(1)
+              } News\n\n`;
+
+              categoryArticles.forEach((article, index) => {
+                newsletterSections += `### ${index + 1}. ${article.title}\n\n`;
+                newsletterSections += `${
+                  article.description ||
+                  "No description available for this article."
+                }\n\n`;
+                newsletterSections += `**Source:** ${
+                  article.source || "Unknown"
+                }\n`;
+                newsletterSections += `**Published:** ${
+                  article.publishedAt
+                    ? new Date(article.publishedAt).toLocaleDateString()
+                    : "Unknown date"
+                }\n`;
+                newsletterSections += `**Read more:** [${article.title}](${article.url})\n\n`;
+                totalArticlesInNewsletter++;
+              });
+            }
+          });
+
+          const newsletterContent = `# Your Personalized Newsletter
+
+${newsletterSections}
 
 ## 📊 Newsletter Summary
 
 - **Categories:** ${event.data.categories.join(", ")}
-- **Articles Analyzed:** ${allArticles.length}
+- **Articles per Category:** 2
+- **Total Articles:** ${totalArticlesInNewsletter}
 - **Generated:** ${date}
 - **Frequency:** ${event.data.frequency}
 
 ## 🔗 Quick Links
 
-${topArticles
+${Object.values(articlesByCategory)
+  .flat()
   .slice(0, 3)
   .map((article, index) => `${index + 1}. [${article.title}](${article.url})`)
   .join("\n")}
@@ -97,8 +180,13 @@ ${topArticles
 *This newsletter was automatically generated based on your selected categories. Stay informed with the latest news and insights!*
 
 **Categories:** ${event.data.categories.join(", ")}
-**Total Articles:** ${allArticles.length}
+**Total Articles:** ${totalArticlesInNewsletter}
 **Generated on:** ${date}`;
+
+          return {
+            newsletterContent,
+            selectedArticles: Object.values(articlesByCategory).flat(),
+          };
         }
       );
 
@@ -386,7 +474,7 @@ ${topArticles
 
       const result = {
         newsletter: newsletterContent,
-        articleCount: allArticles.length,
+        articleCount: selectedArticles.length,
         categories: event.data.categories,
         emailSent: true,
         nextScheduled: true,

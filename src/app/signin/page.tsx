@@ -235,7 +235,7 @@ const SignInContent = () => {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
             >
               {isPending ? (
                 <div className="flex items-center">
@@ -276,7 +276,7 @@ const SignInContent = () => {
               <button
                 type="button"
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="ml-1 font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200"
+                className="ml-1 font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200 cursor-pointer"
               >
                 {isSignUp ? "Sign in" : "Sign up"}
               </button>
@@ -303,7 +303,7 @@ const SignInContent = () => {
               type="button"
               onClick={() => handleOAuthSignIn("google")}
               disabled={oauthLoading !== null}
-              className="w-full max-w-xs inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full max-w-xs inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {oauthLoading === "google" ? (
                 <svg
@@ -345,7 +345,7 @@ const SignInContent = () => {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  <span className="ml-2">Google</span>
+                  <span className="ml-2 cursor-pointer">Google</span>
                 </>
               )}
             </button>
@@ -355,11 +355,17 @@ const SignInContent = () => {
         {/* Footer */}
         <div className="text-center text-xs text-gray-500">
           By continuing, you agree to our{" "}
-          <Link href="/terms" className="text-blue-600 hover:text-blue-500">
+          <Link
+            href="/terms"
+            className="text-blue-600 hover:text-blue-500 cursor-pointer"
+          >
             Terms of Service
           </Link>{" "}
           and{" "}
-          <Link href="/privacy" className="text-blue-600 hover:text-blue-500">
+          <Link
+            href="/privacy"
+            className="text-blue-600 hover:text-blue-500 cursor-pointer"
+          >
             Privacy Policy
           </Link>
         </div>

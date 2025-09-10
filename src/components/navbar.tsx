@@ -41,7 +41,7 @@ export function Navbar() {
         >
           <div className="h-8 w-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
             <svg
-              className="h-5 w-5 text-white"
+              className="h-5 w-5 text-white cursor-pointer"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -54,7 +54,7 @@ export function Navbar() {
               />
             </svg>
           </div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent cursor-pointer">
             Sendly
           </h1>
         </Link>

@@ -167,7 +167,7 @@ export default function PublicPreferencesPage() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => router.push("/")}
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+                className="text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
               >
                 Back to Home
               </button>
@@ -301,7 +301,7 @@ export default function PublicPreferencesPage() {
         <div className="text-center">
           <button
             onClick={handleSavePreferences}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-all transform hover:scale-105"
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-all transform hover:scale-105 cursor-pointer"
           >
             Get Started
           </button>
