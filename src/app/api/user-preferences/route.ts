@@ -66,16 +66,46 @@ export async function POST(request: NextRequest) {
 
     // Schedule the first newsletter - let Inngest handle the timing
     try {
-      const { ids } = await inngest.send({
-        name: "newsletter.schedule",
-        data: {
-          userId: user.id,
-          email: email, // Use the email from the form
-          categories: categories,
-          frequency: frequency,
-          isTest: process.env.NODE_ENV !== "production", // Test mode only in development
-        },
-      });
+      let ids;
+
+      if (process.env.NODE_ENV === "development") {
+        // Use local Inngest dev server
+        const { ids: localIds } = await inngest.send({
+          name: "newsletter.schedule",
+          data: {
+            userId: user.id,
+            email: email,
+            categories: categories,
+            frequency: frequency,
+            isTest: true,
+          },
+        });
+        ids = localIds;
+      } else {
+        // Use webhook URL for production
+        const response = await fetch(
+          "https://inn.gs/e/hXBbOCiyPJ9d1OWEKDS3I1pRPZAWXlhkvNhFQwS1QZXxVvCyNsDOJLyw9FYp89KeZ3IfCT38t_FZRvoqsbXJYQ",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: "newsletter.schedule",
+              data: {
+                userId: user.id,
+                email: email,
+                categories: categories,
+                frequency: frequency,
+                isTest: false,
+              },
+            }),
+          }
+        );
+
+        const result = await response.json();
+        ids = [result.id || "webhook-event"];
+      }
 
       return NextResponse.json({
         success: true,
