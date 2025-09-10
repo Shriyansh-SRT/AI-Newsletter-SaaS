@@ -3,5 +3,5 @@ import { Inngest } from "inngest";
 // Create a client to send and receive events
 export const inngest = new Inngest({
   id: "ainewsletterapp",
-  eventKey: process.env.INNGEST_SIGNING_KEY,
+  eventKey: process.env.INNGEST_EVENT_KEY || process.env.INNGEST_SIGNING_KEY,
 });
