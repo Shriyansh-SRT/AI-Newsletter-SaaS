@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         });
         ids = localIds;
       } else {
-        // Use webhook URL for production
+        // Use new webhook URL for production
         const response = await fetch(
           "https://inn.gs/e/hXBbOCiyPJ9d1OWEKDS3I1pRPZAWXlhkvNhFQwS1QZXxVvCyNsDOJLyw9FYp89KeZ3IfCT38t_FZRvoqsbXJYQ",
           {
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         );
 
         const result = await response.json();
-        ids = [result.id || "webhook-event"];
+        ids = [result.id || "direct-event"];
       }
 
       return NextResponse.json({
