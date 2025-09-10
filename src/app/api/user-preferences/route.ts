@@ -35,6 +35,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!email || !email.includes("@")) {
+      return NextResponse.json(
+        { error: "Valid email address is required" },
+        { status: 400 }
+      );
+    }
+
     // Save user preferences to database
     const { error: upsertError } = await supabase
       .from("user_preferences")
@@ -43,7 +50,7 @@ export async function POST(request: NextRequest) {
           user_id: user.id,
           categories: categories,
           frequency: frequency,
-          email: email,
+          email: email, // Use the email from the form
           is_active: true,
         },
         { onConflict: "user_id" }
@@ -62,7 +69,7 @@ export async function POST(request: NextRequest) {
       name: "newsletter.schedule",
       data: {
         userId: user.id,
-        email: email,
+        email: email, // Use the email from the form
         categories: categories,
         frequency: frequency,
         isTest: process.env.NODE_ENV !== "production", // Test mode only in development
@@ -132,7 +139,7 @@ export async function PATCH(request: NextRequest) {
             name: "newsletter.schedule",
             data: {
               userId: user.id,
-              email: preferences.email,
+              email: preferences.email, // Use the stored email from preferences
               categories: preferences.categories,
               frequency: preferences.frequency,
               isTest: process.env.NODE_ENV !== "production", // Test mode only in development
@@ -161,7 +168,7 @@ export async function PATCH(request: NextRequest) {
 // Removed rescheduleUserNewsletter function - scheduling now handled by Inngest
 
 // get user preferences
-export async function GET(request: NextRequest) {
+export async function GET() {
   const supabase = await createClient();
 
   // Get the user session

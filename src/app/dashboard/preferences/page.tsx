@@ -10,7 +10,6 @@ import { IoStatsChart } from "react-icons/io5";
 import { FaChartLine } from "react-icons/fa6";
 import toast from "react-hot-toast";
 
-
 // Removed UserPreferences interface - not needed for form-only component
 
 // Skeleton Loading Component
@@ -447,7 +446,8 @@ const PreferencesPage = () => {
                 Email Address
               </h2>
               <p className="text-gray-600 max-w-2xl mx-auto">
-                The email address where you&apos;ll receive your newsletter.
+                Enter the email address where you&apos;d like to receive your
+                newsletter. This can be different from your sign-in email.
               </p>
             </div>
             <div className="max-w-md mx-auto">
